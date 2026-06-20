@@ -1,0 +1,12 @@
+[package]
+name = "forgelink"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Forge detection and URL generation for hosted git repositories"
+readme = "README.md"
+
+[dependencies]
+gix = { version = "0.84", default-features = false, features = ["sha1"] }
+thiserror = "2"
+urlencoding = "2"

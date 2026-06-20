@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/forgelink", "crates/forgelink-cli"]
+resolver = "2"

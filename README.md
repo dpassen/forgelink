@@ -1,0 +1,59 @@
+# forgelink
+
+Generate shareable URLs to files and line ranges in hosted git repositories,
+from the command line.
+
+Inspired by the Emacs package [git-link](https://github.com/sshaw/git-link).
+
+## Supported Forges
+
+- GitHub
+- GitLab
+- SourceHut
+- Bitbucket
+- Codeberg (including forge.fedoraproject.org)
+
+## Usage
+
+By default forgelink generates a stable URL pinned to the current commit SHA:
+
+```sh
+$ forgelink src/main.rs
+https://github.com/user/repo/blob/abc123def.../src/main.rs
+```
+
+Append `:N` for a single line or `:N-M` for a range:
+
+```sh
+$ forgelink src/main.rs:42
+https://github.com/user/repo/blob/abc123def.../src/main.rs#L42
+
+$ forgelink src/main.rs:42-55
+https://github.com/user/repo/blob/abc123def.../src/main.rs#L42-L55
+```
+
+Generate a link to the project homepage with `--project`:
+
+```sh
+$ forgelink --project
+https://github.com/user/repo
+```
+
+It works from any subdirectory inside the repository:
+
+```sh
+$ cd src && forgelink main.rs
+https://github.com/user/repo/blob/abc123def.../src/main.rs
+```
+
+You can also pass an absolute path to link to a file in any repository,
+regardless of your current directory:
+
+```sh
+$ forgelink ~/Developer/other-repo/src/main.rs
+https://github.com/user/other-repo/blob/abc123def.../src/main.rs
+```
+
+## License
+
+Licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.
