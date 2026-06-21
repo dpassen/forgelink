@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] GitHub Actions
+- [x] GitHub Actions
 - [ ] `--branch` flag
 - [ ] Copy to clipboard
 - [ ] Open in browser
