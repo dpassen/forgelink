@@ -50,6 +50,20 @@ $ forgelink --project
 https://github.com/user/repo
 ```
 
+Copy the URL to the clipboard with `--copy`, which still prints it to stdout
+so piping keeps working:
+
+```sh
+$ forgelink --copy src/main.rs
+https://github.com/user/repo/blob/abc123def.../src/main.rs
+```
+
+Clipboard support is a default-on `clipboard` cargo feature. Build with
+`--no-default-features` to drop the `arboard` dependency, which also removes
+the `--copy` flag. On Linux under X11 the clipboard is owned by the running
+process, so the copied URL may not persist after forgelink exits. macOS and
+Windows are unaffected.
+
 It works from any subdirectory inside the repository:
 
 ```sh

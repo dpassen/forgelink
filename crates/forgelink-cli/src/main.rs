@@ -19,6 +19,11 @@ struct Args {
     /// Generate a link to the project homepage instead of a file
     #[arg(long)]
     project: bool,
+
+    /// Copy the URL to the clipboard in addition to printing it
+    #[cfg(feature = "clipboard")]
+    #[arg(long)]
+    copy: bool,
 }
 
 fn parse_file_arg(raw: &str) -> anyhow::Result<(&str, Option<Lines>)> {
@@ -55,26 +60,36 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let cwd = std::env::current_dir()?;
 
-    if args.project {
-        let url = forgelink::project_link(&cwd, "origin")?;
-        println!("{url}");
-        return Ok(());
-    }
-
-    let raw = args
-        .file
-        .ok_or_else(|| anyhow::anyhow!("a file argument is required (or use --project)"))?;
-
-    let (file, lines) = parse_file_arg(&raw)?;
-
-    let git_ref = if args.branch {
-        forgelink::RefSpec::Branch
+    let url = if args.project {
+        forgelink::project_link(&cwd, "origin")?
     } else {
-        forgelink::RefSpec::Commit
+        let raw = args
+            .file
+            .as_deref()
+            .ok_or_else(|| anyhow::anyhow!("a file argument is required (or use --project)"))?;
+        let (file, lines) = parse_file_arg(raw)?;
+        let git_ref = if args.branch {
+            forgelink::RefSpec::Branch
+        } else {
+            forgelink::RefSpec::Commit
+        };
+        forgelink::build_link(&cwd, "origin", file, lines, git_ref)?
     };
 
-    let url = forgelink::build_link(&cwd, "origin", file, lines, git_ref)?;
     println!("{url}");
+
+    #[cfg(feature = "clipboard")]
+    if args.copy {
+        copy_to_clipboard(&url)?;
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "clipboard")]
+fn copy_to_clipboard(url: &str) -> anyhow::Result<()> {
+    let mut clipboard = arboard::Clipboard::new()?;
+    clipboard.set_text(url)?;
     Ok(())
 }
 
