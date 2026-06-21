@@ -32,6 +32,13 @@ $ forgelink src/main.rs:42-55
 https://github.com/user/repo/blob/abc123def.../src/main.rs#L42-L55
 ```
 
+Target a remote other than `origin` with `--remote`:
+
+```sh
+$ forgelink --remote upstream src/main.rs
+https://github.com/upstream-owner/repo/blob/abc123def.../src/main.rs
+```
+
 Use the current branch name instead of the commit SHA with `--branch`:
 
 ```sh
