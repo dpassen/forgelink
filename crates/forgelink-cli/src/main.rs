@@ -16,6 +16,10 @@ struct Args {
     #[arg(long)]
     branch: bool,
 
+    /// Git remote to use
+    #[arg(long, default_value = "origin")]
+    remote: String,
+
     /// Generate a link to the project homepage instead of a file
     #[arg(long)]
     project: bool,
@@ -66,7 +70,7 @@ fn main() -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
 
     let url = if args.project {
-        forgelink::project_link(&cwd, "origin")?
+        forgelink::project_link(&cwd, &args.remote)?
     } else {
         let raw = args
             .file
@@ -78,7 +82,7 @@ fn main() -> anyhow::Result<()> {
         } else {
             forgelink::RefSpec::Commit
         };
-        forgelink::build_link(&cwd, "origin", file, lines, git_ref)?
+        forgelink::build_link(&cwd, &args.remote, file, lines, git_ref)?
     };
 
     println!("{url}");

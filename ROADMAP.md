@@ -4,4 +4,4 @@
 - [x] `--branch` flag
 - [x] Copy to clipboard
 - [x] Open in browser
-- [ ] `--remote` flag
+- [x] `--remote` flag
