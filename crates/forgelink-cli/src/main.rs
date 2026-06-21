@@ -24,6 +24,11 @@ struct Args {
     #[cfg(feature = "clipboard")]
     #[arg(long)]
     copy: bool,
+
+    /// Open the URL in the default browser in addition to printing it
+    #[cfg(feature = "browser")]
+    #[arg(long)]
+    open: bool,
 }
 
 fn parse_file_arg(raw: &str) -> anyhow::Result<(&str, Option<Lines>)> {
@@ -81,6 +86,11 @@ fn main() -> anyhow::Result<()> {
     #[cfg(feature = "clipboard")]
     if args.copy {
         copy_to_clipboard(&url)?;
+    }
+
+    #[cfg(feature = "browser")]
+    if args.open {
+        open::that(&url)?;
     }
 
     Ok(())

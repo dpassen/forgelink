@@ -58,11 +58,19 @@ $ forgelink --copy src/main.rs
 https://github.com/user/repo/blob/abc123def.../src/main.rs
 ```
 
-Clipboard support is a default-on `clipboard` cargo feature. Build with
-`--no-default-features` to drop the `arboard` dependency, which also removes
-the `--copy` flag. On Linux under X11 the clipboard is owned by the running
-process, so the copied URL may not persist after forgelink exits. macOS and
-Windows are unaffected.
+Open the URL in your default browser with `--open`, which also still prints
+it. `--copy` and `--open` can be combined:
+
+```sh
+$ forgelink --open src/main.rs
+https://github.com/user/repo/blob/abc123def.../src/main.rs
+```
+
+Clipboard and browser support are default-on cargo features (`clipboard` and
+`browser`). Build with `--no-default-features` to drop the `arboard` and `open`
+dependencies, which also removes the `--copy` and `--open` flags. On Linux
+under X11 the clipboard is owned by the running process, so the copied URL may
+not persist after forgelink exits. macOS and Windows are unaffected.
 
 It works from any subdirectory inside the repository:
 
