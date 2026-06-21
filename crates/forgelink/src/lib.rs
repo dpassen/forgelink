@@ -26,6 +26,8 @@ pub enum Error {
     FileOutsideRepository(String),
     #[error("path is not valid UTF-8")]
     NonUtf8Path,
+    #[error("HEAD is detached; use a commit SHA instead")]
+    DetachedHead,
     #[error("line range end ({end}) is before start ({start})")]
     InvalidLineRange { start: NonZeroU32, end: NonZeroU32 },
     #[error(transparent)]
@@ -38,6 +40,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum GitRef {
     Branch(String),
     Commit(String),
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum RefSpec {
+    #[default]
+    Commit,
+    Branch,
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +100,11 @@ pub fn resolve_ref(path: &Path) -> Result<GitRef> {
     remote::head_commit(&repo)
 }
 
+pub fn current_branch(path: &Path) -> Result<GitRef> {
+    let repo = remote::discover(path)?;
+    remote::current_branch(&repo)
+}
+
 pub fn project_link(path: &Path, remote_name: &str) -> Result<String> {
     let repo = remote::discover(path)?;
     let (host, dir) = remote::remote(&repo, remote_name)?;
@@ -103,6 +117,7 @@ pub fn build_link(
     remote_name: &str,
     file: &str,
     lines: Option<Lines>,
+    git_ref: RefSpec,
 ) -> Result<String> {
     let file_path = Path::new(file);
     let absolute = if file_path.is_absolute() {
@@ -121,7 +136,10 @@ pub fn build_link(
 
     let (host, dir) = remote::remote(&repo, remote_name)?;
     let root = remote::root(&repo)?;
-    let git_ref = remote::head_commit(&repo)?;
+    let git_ref = match git_ref {
+        RefSpec::Commit => remote::head_commit(&repo)?,
+        RefSpec::Branch => remote::current_branch(&repo)?,
+    };
 
     let canonical = match absolute.parent() {
         Some(parent) => canonicalize_lenient(parent).join(absolute.file_name().unwrap_or_default()),
@@ -244,7 +262,14 @@ mod tests {
         fs::write(src.join("main.rs"), "fn main() {}").unwrap();
 
         let lines = Lines::single(NonZeroU32::new(3).unwrap());
-        let url = build_link(dir.path(), "origin", "src/main.rs", Some(lines)).unwrap();
+        let url = build_link(
+            dir.path(),
+            "origin",
+            "src/main.rs",
+            Some(lines),
+            RefSpec::Commit,
+        )
+        .unwrap();
 
         assert!(
             url.starts_with("https://github.com/user/repo/blob/"),
@@ -258,7 +283,7 @@ mod tests {
         let dir = init_repo("https://github.com/user/repo.git");
         commit_empty(dir.path());
 
-        let url = build_link(dir.path(), "origin", "src/ghost.rs", None).unwrap();
+        let url = build_link(dir.path(), "origin", "src/ghost.rs", None, RefSpec::Commit).unwrap();
 
         assert!(url.ends_with("/src/ghost.rs"), "got {url}");
     }
@@ -271,8 +296,42 @@ mod tests {
         let stray = outside.path().join("stray.rs");
         fs::write(&stray, "").unwrap();
 
-        let err = build_link(dir.path(), "origin", stray.to_str().unwrap(), None);
+        let err = build_link(
+            dir.path(),
+            "origin",
+            stray.to_str().unwrap(),
+            None,
+            RefSpec::Commit,
+        );
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn build_link_branch_uses_branch_name() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let GitRef::Branch(branch) = current_branch(dir.path()).unwrap() else {
+            panic!("expected a branch");
+        };
+
+        let url = build_link(dir.path(), "origin", "src/main.rs", None, RefSpec::Branch).unwrap();
+
+        assert_eq!(
+            url,
+            format!("https://github.com/user/repo/blob/{branch}/src/main.rs")
+        );
+    }
+
+    #[test]
+    fn build_link_branch_errors_on_detached_head() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let repo = gix::open(dir.path()).unwrap();
+        let sha = repo.head_commit().unwrap().id.to_hex().to_string();
+        fs::write(dir.path().join(".git").join("HEAD"), format!("{sha}\n")).unwrap();
+
+        let err = build_link(dir.path(), "origin", "src/main.rs", None, RefSpec::Branch);
+        assert!(matches!(err, Err(Error::DetachedHead)));
     }
 
     #[test]

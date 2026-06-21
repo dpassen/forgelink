@@ -1,7 +1,7 @@
 # Roadmap
 
 - [x] GitHub Actions
-- [ ] `--branch` flag
+- [x] `--branch` flag
 - [ ] Copy to clipboard
 - [ ] Open in browser
 - [ ] `--remote` flag

@@ -12,6 +12,10 @@ struct Args {
     /// File path, optionally with line number(s): src/main.rs, src/main.rs:42, src/main.rs:42-55
     file: Option<String>,
 
+    /// Use the current branch name instead of the commit SHA
+    #[arg(long)]
+    branch: bool,
+
     /// Generate a link to the project homepage instead of a file
     #[arg(long)]
     project: bool,
@@ -63,7 +67,13 @@ fn main() -> anyhow::Result<()> {
 
     let (file, lines) = parse_file_arg(&raw)?;
 
-    let url = forgelink::build_link(&cwd, "origin", file, lines)?;
+    let git_ref = if args.branch {
+        forgelink::RefSpec::Branch
+    } else {
+        forgelink::RefSpec::Commit
+    };
+
+    let url = forgelink::build_link(&cwd, "origin", file, lines, git_ref)?;
     println!("{url}");
     Ok(())
 }
