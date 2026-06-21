@@ -2,6 +2,6 @@
 
 - [x] GitHub Actions
 - [x] `--branch` flag
-- [ ] Copy to clipboard
+- [x] Copy to clipboard
 - [ ] Open in browser
 - [ ] `--remote` flag
