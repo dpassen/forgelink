@@ -13,6 +13,14 @@ Inspired by the Emacs package [git-link](https://github.com/sshaw/git-link).
 - Bitbucket
 - Codeberg (including forge.fedoraproject.org)
 
+## Installation
+
+```sh
+cargo install forgelink-cli
+```
+
+This installs a binary named `forgelink`.
+
 ## Usage
 
 By default forgelink generates a stable URL pinned to the current commit SHA:

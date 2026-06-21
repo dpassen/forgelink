@@ -5,6 +5,9 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Forge detection and URL generation for hosted git repositories"
 readme = "README.md"
+repository = "https://github.com/dpassen/forgelink"
+keywords = ["git", "forge", "url", "github", "gitlab"]
+categories = ["development-tools"]
 
 [dependencies]
 gix = { version = "0.84", default-features = false, features = ["sha1"] }
