@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::num::NonZeroU32;
 
 use clap::Parser;
 use forgelink::Lines;
@@ -17,25 +17,34 @@ struct Args {
     project: bool,
 }
 
-fn parse_file_arg(raw: &str) -> (&str, Option<Lines>) {
-    if let Some(colon) = raw.rfind(':') {
-        let spec = &raw[colon + 1..];
-        if let Some(lines) = parse_line_spec(spec) {
-            return (&raw[..colon], Some(lines));
-        }
+fn parse_file_arg(raw: &str) -> anyhow::Result<(&str, Option<Lines>)> {
+    let Some(colon) = raw.rfind(':') else {
+        return Ok((raw, None));
+    };
+    match parse_line_spec(&raw[colon + 1..])? {
+        Some(lines) => Ok((&raw[..colon], Some(lines))),
+        None => Ok((raw, None)),
     }
-    (raw, None)
 }
 
-fn parse_line_spec(spec: &str) -> Option<Lines> {
+fn parse_line_spec(spec: &str) -> anyhow::Result<Option<Lines>> {
+    let is_digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+
     if let Some((start, end)) = spec.split_once('-') {
-        let s = start.parse::<u32>().ok()?;
-        let e = end.parse::<u32>().ok()?;
-        Some(Lines::Range(s, e))
+        if is_digits(start) && is_digits(end) {
+            return Ok(Some(Lines::range(parse_line(start)?, parse_line(end)?)?));
+        }
+        Ok(None)
+    } else if is_digits(spec) {
+        Ok(Some(Lines::single(parse_line(spec)?)))
     } else {
-        let n = spec.parse::<u32>().ok()?;
-        Some(Lines::Single(n))
+        Ok(None)
     }
+}
+
+fn parse_line(s: &str) -> anyhow::Result<NonZeroU32> {
+    s.parse::<NonZeroU32>()
+        .map_err(|_| anyhow::anyhow!("invalid line number '{s}': line numbers start at 1"))
 }
 
 fn main() -> anyhow::Result<()> {
@@ -52,17 +61,9 @@ fn main() -> anyhow::Result<()> {
         .file
         .ok_or_else(|| anyhow::anyhow!("a file argument is required (or use --project)"))?;
 
-    let (file, lines) = parse_file_arg(&raw);
+    let (file, lines) = parse_file_arg(&raw)?;
 
-    let file_path = Path::new(file);
-    let discovery = if file_path.is_absolute() {
-        file_path.parent().unwrap_or(file_path).to_path_buf()
-    } else {
-        cwd.clone()
-    };
-
-    let git_ref = forgelink::resolve_ref(&discovery)?;
-    let url = forgelink::build_link(&cwd, "origin", git_ref, file, lines)?;
+    let url = forgelink::build_link(&cwd, "origin", file, lines)?;
     println!("{url}");
     Ok(())
 }
@@ -73,36 +74,51 @@ mod tests {
 
     #[test]
     fn no_colon_returns_full_path() {
-        let (file, lines) = parse_file_arg("src/main.rs");
+        let (file, lines) = parse_file_arg("src/main.rs").unwrap();
         assert_eq!(file, "src/main.rs");
         assert!(lines.is_none());
     }
 
     #[test]
     fn colon_with_single_line() {
-        let (file, lines) = parse_file_arg("src/main.rs:42");
+        let (file, lines) = parse_file_arg("src/main.rs:42").unwrap();
         assert_eq!(file, "src/main.rs");
-        assert!(matches!(lines, Some(Lines::Single(42))));
+        let lines = lines.unwrap();
+        assert_eq!(lines.start().get(), 42);
+        assert_eq!(lines.end().get(), 42);
     }
 
     #[test]
     fn colon_with_line_range() {
-        let (file, lines) = parse_file_arg("src/main.rs:42-55");
+        let (file, lines) = parse_file_arg("src/main.rs:42-55").unwrap();
         assert_eq!(file, "src/main.rs");
-        assert!(matches!(lines, Some(Lines::Range(42, 55))));
+        let lines = lines.unwrap();
+        assert_eq!(lines.start().get(), 42);
+        assert_eq!(lines.end().get(), 55);
     }
 
     #[test]
     fn colon_with_non_numeric_spec_returns_full_string() {
-        let (file, lines) = parse_file_arg("src/main.rs:notanumber");
+        let (file, lines) = parse_file_arg("src/main.rs:notanumber").unwrap();
         assert_eq!(file, "src/main.rs:notanumber");
         assert!(lines.is_none());
     }
 
     #[test]
     fn absolute_path_with_line() {
-        let (file, lines) = parse_file_arg("/home/user/project/src/main.rs:10");
+        let (file, lines) = parse_file_arg("/home/user/project/src/main.rs:10").unwrap();
         assert_eq!(file, "/home/user/project/src/main.rs");
-        assert!(matches!(lines, Some(Lines::Single(10))));
+        let lines = lines.unwrap();
+        assert_eq!(lines.start().get(), 10);
+    }
+
+    #[test]
+    fn line_zero_is_an_error() {
+        assert!(parse_file_arg("src/main.rs:0").is_err());
+    }
+
+    #[test]
+    fn backwards_range_is_an_error() {
+        assert!(parse_file_arg("src/main.rs:55-42").is_err());
     }
 }
