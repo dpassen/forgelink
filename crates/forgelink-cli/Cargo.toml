@@ -15,7 +15,9 @@ forgelink = { path = "../forgelink" }
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 arboard = { version = "3", optional = true }
+open = { version = "5", optional = true }
 
 [features]
-default = ["clipboard"]
+default = ["clipboard", "browser"]
 clipboard = ["dep:arboard"]
+browser = ["dep:open"]
