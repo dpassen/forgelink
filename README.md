@@ -32,6 +32,17 @@ $ forgelink src/main.rs:42-55
 https://github.com/user/repo/blob/abc123def.../src/main.rs#L42-L55
 ```
 
+Use the current branch name instead of the commit SHA with `--branch`:
+
+```sh
+$ forgelink --branch src/main.rs
+https://github.com/user/repo/blob/main/src/main.rs
+```
+
+`--branch` requires HEAD to be on a named branch. It errors on a detached
+HEAD, which includes Jujutsu (`jj`) working copies. Use the default
+commit-pinned link in that case.
+
 Generate a link to the project homepage with `--project`:
 
 ```sh

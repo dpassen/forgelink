@@ -31,6 +31,19 @@ pub fn head_commit(repo: &gix::Repository) -> Result<GitRef> {
     Ok(GitRef::Commit(commit.id.to_hex().to_string()))
 }
 
+pub fn current_branch(repo: &gix::Repository) -> Result<GitRef> {
+    let name = repo
+        .head_name()
+        .map_err(|e| Error::NoCommit(Box::new(e)))?
+        .ok_or(Error::DetachedHead)?;
+    let branch = name
+        .shorten()
+        .to_str()
+        .map_err(|_| Error::NonUtf8Path)?
+        .to_string();
+    Ok(GitRef::Branch(branch))
+}
+
 fn parse_remote_url(raw: &str) -> Result<(String, String)> {
     let url = gix::url::parse(raw.into()).map_err(|e| Error::InvalidRemoteUrl(e.to_string()))?;
 
