@@ -6,6 +6,7 @@ use forgelink::Lines;
 #[derive(Parser)]
 #[command(
     name = "forgelink",
+    version,
     about = "Generate shareable URLs to files in hosted git repositories"
 )]
 struct Args {
