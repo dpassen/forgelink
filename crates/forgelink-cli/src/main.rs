@@ -45,14 +45,16 @@ fn parse_file_arg(raw: &str) -> anyhow::Result<(&str, Option<Lines>)> {
     }
 }
 
-fn parse_line_spec(spec: &str) -> anyhow::Result<Option<Lines>> {
-    let is_digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+fn is_digits(s: &str) -> bool {
+    !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit())
+}
 
-    if let Some((start, end)) = spec.split_once('-') {
-        if is_digits(start) && is_digits(end) {
-            return Ok(Some(Lines::range(parse_line(start)?, parse_line(end)?)?));
-        }
-        Ok(None)
+fn parse_line_spec(spec: &str) -> anyhow::Result<Option<Lines>> {
+    if let Some((start, end)) = spec.split_once('-')
+        && is_digits(start)
+        && is_digits(end)
+    {
+        Ok(Some(Lines::range(parse_line(start)?, parse_line(end)?)?))
     } else if is_digits(spec) {
         Ok(Some(Lines::single(parse_line(spec)?)))
     } else {
