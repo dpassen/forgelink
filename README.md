@@ -102,6 +102,35 @@ $ forgelink ~/Developer/other-repo/src/main.rs
 https://github.com/user/other-repo/blob/abc123def.../src/main.rs
 ```
 
+## Editor integration
+
+forgelink takes a `path:line` argument and prints a URL, so any editor that can
+run a shell command with the current buffer path and cursor line can bind it
+directly, with no plugin required.
+
+### Helix
+
+In `~/.config/helix/config.toml`:
+
+```toml
+[keys.normal.space]
+o = ":sh forgelink %{file_path_absolute}:%{cursor_line} --copy"
+```
+
+`space o` copies a link to the current line. `%{file_path_absolute}` is used so
+it works regardless of the directory Helix was launched from.
+
+### Kakoune
+
+In `~/.config/kak/kakrc`:
+
+```kak
+define-command -docstring 'copy a forge link to the current line' forge-link %{
+    nop %sh{ forgelink "$kak_buffile:$kak_cursor_line" --copy }
+}
+map global user o ': forge-link<ret>' -docstring 'forge link'
+```
+
 ## License
 
 Licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.
