@@ -15,3 +15,11 @@ jobs:
         with:
           components: clippy
       - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  rumdl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: rvben/rumdl@v0
+        with:
+          report-type: annotations
