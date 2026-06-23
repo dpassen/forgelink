@@ -20,12 +20,13 @@ forgelink = "0.1"
 ```
 
 ```rust
+use std::num::NonZeroU32;
 use std::path::Path;
-use forgelink::{build_link, resolve_ref};
+use forgelink::{build_link, Lines, RefSpec};
 
 let path = Path::new(".");
-let git_ref = resolve_ref(path)?;
-let url = build_link(path, "origin", git_ref, "src/main.rs", None, None)?;
+let lines = Lines::range(NonZeroU32::new(1).unwrap(), NonZeroU32::new(5).unwrap())?;
+let url = build_link(path, "origin", "src/main.rs", Some(lines), RefSpec::Commit)?;
 println!("{url}");
 ```
 
