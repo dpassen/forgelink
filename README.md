@@ -133,7 +133,9 @@ map global user o ': forge-link<ret>' -docstring 'forge link'
 
 ### Neovim
 
-The following is a Lua implementation for using forgelink in Neovim. It will send a link to the file path in normal mode and a link to the line(s) selected in visual mode to the system clipboard.
+The following is a Lua implementation for using forgelink in Neovim. It will
+send a link to the file path in normal mode and a link to the line(s) selected
+in visual mode to the system clipboard.
 
 ```lua
 if vim.fn.exepath('forgelink') ~= '' then
