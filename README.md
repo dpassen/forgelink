@@ -131,6 +131,35 @@ define-command -docstring 'copy a forge link to the current line' forge-link %{
 map global user o ': forge-link<ret>' -docstring 'forge link'
 ```
 
+### Neovim
+
+The following is a Lua implementation for using forgelink in Neovim. It will send a link to the file path in normal mode and a link to the line(s) selected in visual mode to the system clipboard.
+
+```lua
+if vim.fn.exepath('forgelink') ~= '' then
+    vim.keymap.set('n', '<leader>cf',
+        function()
+            local curFile = vim.api.nvim_buf_get_name(0)
+            local output = vim.fn.system('forgelink ' .. curFile)
+            vim.fn.setreg('+', output)
+        end,
+        { desc = "Copy URL to Git forge for current file to clipboard" }
+    )
+    vim.keymap.set('v', '<leader>cf',
+        function()
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
+            local curFile = vim.api.nvim_buf_get_name(0)
+            local startLine = vim.fn.line("'<")
+            local endLine = vim.fn.line("'>")
+            local lineRef = startLine == endLine and tostring(startLine) or (startLine .. '-' .. endLine)
+            local output = vim.fn.system('forgelink ' .. curFile .. ':' .. lineRef)
+            vim.fn.setreg('+', output)
+        end,
+        { desc = "Copy URL to Git forge for current file with selected line numbers to clipboard" }
+    )
+end
+```
+
 ## License
 
 Licensed under either of [MIT](https://github.com/dpassen/forgelink/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/dpassen/forgelink/blob/main/LICENSE-APACHE) at your option.
