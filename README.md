@@ -1,5 +1,7 @@
 # forgelink
 
+[![crates.io](https://img.shields.io/crates/v/forgelink-cli.svg)](https://crates.io/crates/forgelink-cli)
+
 Generate shareable URLs to files and line ranges in hosted git repositories,
 from the command line.
 

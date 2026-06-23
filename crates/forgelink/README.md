@@ -1,5 +1,7 @@
 # forgelink
 
+[![crates.io](https://img.shields.io/crates/v/forgelink.svg)](https://crates.io/crates/forgelink)
+
 Forge detection and URL generation for hosted git repositories.
 
 This is the library crate behind the [`forgelink`](https://crates.io/crates/forgelink-cli) CLI tool.
