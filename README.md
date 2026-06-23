@@ -144,8 +144,8 @@ if vim.fn.exepath('forgelink') ~= '' then
     vim.keymap.set('n', '<leader>cf',
         function()
             local curFile = vim.api.nvim_buf_get_name(0)
-            local output = vim.fn.system('forgelink ' .. curFile)
-            vim.fn.setreg('+', output)
+            local output = vim.fn.system({ 'forgelink', curFile })
+            vim.fn.setreg('+', vim.trim(output))
         end,
         { desc = "Copy URL to Git forge for current file to clipboard" }
     )
@@ -156,8 +156,8 @@ if vim.fn.exepath('forgelink') ~= '' then
             local startLine = vim.fn.line("'<")
             local endLine = vim.fn.line("'>")
             local lineRef = startLine == endLine and tostring(startLine) or (startLine .. '-' .. endLine)
-            local output = vim.fn.system('forgelink ' .. curFile .. ':' .. lineRef)
-            vim.fn.setreg('+', output)
+            local output = vim.fn.system({ 'forgelink', curFile .. ':' .. lineRef })
+            vim.fn.setreg('+', vim.trim(output))
         end,
         { desc = "Copy URL to Git forge for current file with selected line numbers to clipboard" }
     )
