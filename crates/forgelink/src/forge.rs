@@ -179,8 +179,8 @@ mod tests {
         GitRef::Branch(name.into())
     }
 
-    fn nz(n: u32) -> std::num::NonZeroU32 {
-        std::num::NonZeroU32::new(n).unwrap()
+    fn nz(n: u32) -> std::num::NonZero<u32> {
+        std::num::NonZero::new(n).unwrap()
     }
 
     // --- detection ---

@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::num::NonZero;
 
 use clap::Parser;
 use forgelink::Lines;
@@ -63,8 +63,8 @@ fn parse_line_spec(spec: &str) -> anyhow::Result<Option<Lines>> {
     }
 }
 
-fn parse_line(s: &str) -> anyhow::Result<NonZeroU32> {
-    s.parse::<NonZeroU32>()
+fn parse_line(s: &str) -> anyhow::Result<NonZero<u32>> {
+    s.parse()
         .map_err(|_| anyhow::anyhow!("invalid line number '{s}': line numbers start at 1"))
 }
 
