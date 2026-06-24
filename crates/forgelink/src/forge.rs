@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use crate::{GitRef, Lines, LinkRequest};
 
 fn encode(s: &str) -> String {
@@ -72,8 +74,8 @@ fn github(req: &LinkRequest) -> String {
     );
     if let Some(lines) = &req.lines {
         match lines {
-            Lines::Single(n) => url.push_str(&format!("#L{n}")),
-            Lines::Range(s, e) => url.push_str(&format!("#L{s}-L{e}")),
+            Lines::Single(n) => write!(url, "#L{n}").unwrap(),
+            Lines::Range(s, e) => write!(url, "#L{s}-L{e}").unwrap(),
         }
     }
     url
@@ -90,8 +92,8 @@ fn gitlab(req: &LinkRequest) -> String {
     );
     if let Some(lines) = &req.lines {
         match lines {
-            Lines::Single(n) => url.push_str(&format!("#L{n}")),
-            Lines::Range(s, e) => url.push_str(&format!("#L{s}-{e}")),
+            Lines::Single(n) => write!(url, "#L{n}").unwrap(),
+            Lines::Range(s, e) => write!(url, "#L{s}-{e}").unwrap(),
         }
     }
     url
@@ -108,8 +110,8 @@ fn sourcehut(req: &LinkRequest) -> String {
     );
     if let Some(lines) = &req.lines {
         match lines {
-            Lines::Single(n) => url.push_str(&format!("#L{n}")),
-            Lines::Range(s, e) => url.push_str(&format!("#L{s}-{e}")),
+            Lines::Single(n) => write!(url, "#L{n}").unwrap(),
+            Lines::Range(s, e) => write!(url, "#L{s}-{e}").unwrap(),
         }
     }
     url
@@ -128,8 +130,8 @@ fn bitbucket(req: &LinkRequest) -> String {
     );
     if let Some(lines) = &req.lines {
         match lines {
-            Lines::Single(n) => url.push_str(&format!("#{basename}-{n}")),
-            Lines::Range(s, e) => url.push_str(&format!("#{basename}-{s}:{e}")),
+            Lines::Single(n) => write!(url, "#{basename}-{n}").unwrap(),
+            Lines::Range(s, e) => write!(url, "#{basename}-{s}:{e}").unwrap(),
         }
     }
     url
@@ -149,8 +151,8 @@ fn codeberg(req: &LinkRequest) -> String {
     );
     if let Some(lines) = &req.lines {
         match lines {
-            Lines::Single(n) => url.push_str(&format!("#L{n}")),
-            Lines::Range(s, e) => url.push_str(&format!("#L{s}-L{e}")),
+            Lines::Single(n) => write!(url, "#L{n}").unwrap(),
+            Lines::Range(s, e) => write!(url, "#L{s}-L{e}").unwrap(),
         }
     }
     url
