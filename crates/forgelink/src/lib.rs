@@ -3,7 +3,7 @@ mod remote;
 
 pub use forge::Forge;
 
-use std::num::NonZeroU32;
+use std::num::NonZero;
 use std::path::Path;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -29,7 +29,10 @@ pub enum Error {
     #[error("HEAD is detached; use a commit SHA instead")]
     DetachedHead,
     #[error("line range end ({end}) is before start ({start})")]
-    InvalidLineRange { start: NonZeroU32, end: NonZeroU32 },
+    InvalidLineRange {
+        start: NonZero<u32>,
+        end: NonZero<u32>,
+    },
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
@@ -52,30 +55,30 @@ pub enum RefSpec {
 #[derive(Debug, Clone)]
 pub enum Lines {
     #[non_exhaustive]
-    Single(NonZeroU32),
+    Single(NonZero<u32>),
     #[non_exhaustive]
-    Range(NonZeroU32, NonZeroU32),
+    Range(NonZero<u32>, NonZero<u32>),
 }
 
 impl Lines {
-    pub fn single(line: NonZeroU32) -> Self {
+    pub fn single(line: NonZero<u32>) -> Self {
         Lines::Single(line)
     }
 
-    pub fn range(start: NonZeroU32, end: NonZeroU32) -> Result<Self> {
+    pub fn range(start: NonZero<u32>, end: NonZero<u32>) -> Result<Self> {
         if end < start {
             return Err(Error::InvalidLineRange { start, end });
         }
         Ok(Lines::Range(start, end))
     }
 
-    pub fn start(&self) -> NonZeroU32 {
+    pub fn start(&self) -> NonZero<u32> {
         match self {
             Lines::Single(n) | Lines::Range(n, _) => *n,
         }
     }
 
-    pub fn end(&self) -> NonZeroU32 {
+    pub fn end(&self) -> NonZero<u32> {
         match self {
             Lines::Single(n) | Lines::Range(_, n) => *n,
         }
@@ -261,7 +264,7 @@ mod tests {
         fs::create_dir_all(&src).unwrap();
         fs::write(src.join("main.rs"), "fn main() {}").unwrap();
 
-        let lines = Lines::single(NonZeroU32::new(3).unwrap());
+        let lines = Lines::single(NonZero::new(3).unwrap());
         let url = build_link(
             dir.path(),
             "origin",
@@ -343,21 +346,20 @@ mod tests {
 
     #[test]
     fn lines_range_accepts_ascending() {
-        let lines =
-            Lines::range(NonZeroU32::new(10).unwrap(), NonZeroU32::new(20).unwrap()).unwrap();
+        let lines = Lines::range(NonZero::new(10).unwrap(), NonZero::new(20).unwrap()).unwrap();
         assert_eq!(lines.start().get(), 10);
         assert_eq!(lines.end().get(), 20);
     }
 
     #[test]
     fn lines_range_allows_equal() {
-        let n = NonZeroU32::new(5).unwrap();
+        let n = NonZero::new(5).unwrap();
         assert!(Lines::range(n, n).is_ok());
     }
 
     #[test]
     fn lines_range_rejects_backwards() {
-        let err = Lines::range(NonZeroU32::new(20).unwrap(), NonZeroU32::new(10).unwrap());
+        let err = Lines::range(NonZero::new(20).unwrap(), NonZero::new(10).unwrap());
         assert!(matches!(err, Err(Error::InvalidLineRange { .. })));
     }
 }
