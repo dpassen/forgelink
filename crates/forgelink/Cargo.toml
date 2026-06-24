@@ -9,6 +9,9 @@ repository = "https://github.com/dpassen/forgelink"
 keywords = ["git", "forge", "url", "github", "gitlab"]
 categories = ["development-tools"]
 
+[lints]
+workspace = true
+
 [dependencies]
 gix = { version = "0.84", default-features = false, features = ["sha1"] }
 thiserror = "2"
