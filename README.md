@@ -121,9 +121,10 @@ o = ":sh forgelink %{file_path_absolute}:%{cursor_line} --copy"
 
 `space o` copies a link to the current line. `%{file_path_absolute}` is used so
 it works regardless of the directory Helix was launched from.
+
 If you are using a version released before
-[helix-editor/helix#12989](https://github.com/helix-editor/helix/pull/12989)
-was merged, you should use `%{buffer_name}` instead.
+[helix-editor/helix#12989](https://github.com/helix-editor/helix/pull/12989) was
+merged (i.e.: 25.07.1), you should use `%{buffer_name}` in place of `%{file_path_absolute}`.
 
 ### Kakoune
 
