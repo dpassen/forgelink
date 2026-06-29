@@ -1,6 +1,9 @@
 # forgelink
 
 [![crates.io](https://img.shields.io/crates/v/forgelink-cli.svg)](https://crates.io/crates/forgelink-cli)
+[![test](https://github.com/dpassen/forgelink/actions/workflows/test.yaml/badge.svg)](https://github.com/dpassen/forgelink/actions/workflows/test.yaml)
+[![lint](https://github.com/dpassen/forgelink/actions/workflows/lint.yaml/badge.svg)](https://github.com/dpassen/forgelink/actions/workflows/lint.yaml)
+[![format](https://github.com/dpassen/forgelink/actions/workflows/format.yaml/badge.svg)](https://github.com/dpassen/forgelink/actions/workflows/format.yaml)
 
 Generate shareable URLs to files and line ranges in hosted git repositories,
 from the command line.
