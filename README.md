@@ -12,11 +12,11 @@ Inspired by the Emacs package [git-link](https://github.com/sshaw/git-link).
 
 ## Supported Forges
 
-- GitHub
-- GitLab
-- SourceHut
-- Bitbucket
-- Codeberg (including forge.fedoraproject.org)
+- [GitHub](https://github.com)
+- [GitLab](https://gitlab.com)
+- [SourceHut](https://sourcehut.org)
+- [Bitbucket](https://bitbucket.org)
+- [Codeberg](https://codeberg.org) (including [forge.fedoraproject.org](https://forge.fedoraproject.org))
 
 ## Installation
 
