@@ -13,7 +13,7 @@ categories = ["development-tools"]
 workspace = true
 
 [dependencies]
-gix = { version = "0.84", default-features = false, features = ["sha1"] }
+gix = { version = "0.85", default-features = false, features = ["sha1"] }
 thiserror = "2"
 urlencoding = "2"
 
