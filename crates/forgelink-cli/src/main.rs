@@ -25,15 +25,19 @@ struct Args {
     #[arg(long)]
     project: bool,
 
-    /// Copy the URL to the clipboard in addition to printing it
+    /// Copy the URL to the clipboard
     #[cfg(feature = "clipboard")]
     #[arg(long)]
     copy: bool,
 
-    /// Open the URL in the default browser in addition to printing it
+    /// Open the URL in the default browser
     #[cfg(feature = "browser")]
     #[arg(long)]
     open: bool,
+
+    /// Do not print the URL to standard out
+    #[arg(long)]
+    quiet: bool,
 }
 
 fn parse_file_arg(raw: &str) -> anyhow::Result<(&str, Option<Lines>)> {
@@ -88,7 +92,9 @@ fn main() -> anyhow::Result<()> {
         forgelink::build_link(&cwd, &args.remote, file, lines, git_ref)?
     };
 
-    println!("{url}");
+    if !args.quiet {
+        println!("{url}");
+    }
 
     #[cfg(feature = "clipboard")]
     if args.copy {
