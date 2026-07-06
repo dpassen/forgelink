@@ -86,6 +86,13 @@ $ forgelink --open src/main.rs
 https://github.com/user/repo/blob/abc123def.../src/main.rs
 ```
 
+Suppress the printed URL with `--quiet`, which is useful when you only want the
+clipboard or browser side effect:
+
+```sh
+forgelink --copy --quiet src/main.rs
+```
+
 Clipboard and browser support are default-on cargo features (`clipboard` and
 `browser`). Build with `--no-default-features` to drop the `arboard` and `open`
 dependencies, which also removes the `--copy` and `--open` flags. On Linux
@@ -119,7 +126,7 @@ In `~/.config/helix/config.toml`:
 
 ```toml
 [keys.normal.space]
-o = ":sh forgelink %{file_path_absolute}:%{cursor_line} --copy"
+o = ":sh forgelink %{file_path_absolute}:%{cursor_line} --copy --quiet"
 ```
 
 `space o` copies a link to the current line. `%{file_path_absolute}` is used so
@@ -135,7 +142,7 @@ In `~/.config/kak/kakrc`:
 
 ```kak
 define-command -docstring 'copy a forge link to the current line' forge-link %{
-    nop %sh{ forgelink "$kak_buffile:$kak_cursor_line" --copy }
+    nop %sh{ forgelink "$kak_buffile:$kak_cursor_line" --copy --quiet }
 }
 map global user o ': forge-link<ret>' -docstring 'forge link'
 ```
