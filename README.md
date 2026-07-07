@@ -28,34 +28,34 @@ This installs a binary named `forgelink`.
 
 ## Usage
 
-By default forgelink generates a stable URL pinned to the current commit SHA:
+Use `print` to generate a stable URL pinned to the current commit SHA:
 
 ```sh
-$ forgelink src/main.rs
+$ forgelink print src/main.rs
 https://github.com/user/repo/blob/abc123def.../src/main.rs
 ```
 
 Append `:N` for a single line or `:N-M` for a range:
 
 ```sh
-$ forgelink src/main.rs:42
+$ forgelink print src/main.rs:42
 https://github.com/user/repo/blob/abc123def.../src/main.rs#L42
 
-$ forgelink src/main.rs:42-55
+$ forgelink print src/main.rs:42-55
 https://github.com/user/repo/blob/abc123def.../src/main.rs#L42-L55
 ```
 
 Target a remote other than `origin` with `--remote`:
 
 ```sh
-$ forgelink --remote upstream src/main.rs
+$ forgelink print --remote upstream src/main.rs
 https://github.com/upstream-owner/repo/blob/abc123def.../src/main.rs
 ```
 
 Use the current branch name instead of the commit SHA with `--branch`:
 
 ```sh
-$ forgelink --branch src/main.rs
+$ forgelink print --branch src/main.rs
 https://github.com/user/repo/blob/main/src/main.rs
 ```
 
@@ -63,46 +63,31 @@ https://github.com/user/repo/blob/main/src/main.rs
 HEAD, which includes Jujutsu (`jj`) working copies. Use the default
 commit-pinned link in that case.
 
-Generate a link to the project homepage with `--project`:
+Copy the URL to the clipboard with `copy`:
 
 ```sh
-$ forgelink --project
-https://github.com/user/repo
+forgelink copy src/main.rs
 ```
 
-Copy the URL to the clipboard with `--copy`, which still prints it to stdout
-so piping keeps working:
+Open the URL in your default browser with `open`:
 
 ```sh
-$ forgelink --copy src/main.rs
-https://github.com/user/repo/blob/abc123def.../src/main.rs
+forgelink open src/main.rs
 ```
 
-Open the URL in your default browser with `--open`, which also still prints
-it. `--copy` and `--open` can be combined:
-
-```sh
-$ forgelink --open src/main.rs
-https://github.com/user/repo/blob/abc123def.../src/main.rs
-```
-
-Suppress the printed URL with `--quiet`, which is useful when you only want the
-clipboard or browser side effect:
-
-```sh
-forgelink --copy --quiet src/main.rs
-```
+`copy` and `open` do not print the URL. Use `print` when you want stdout.
+When available, all subcommands support the same `--remote` and `--branch` options.
 
 Clipboard and browser support are default-on cargo features (`clipboard` and
 `browser`). Build with `--no-default-features` to drop the `arboard` and `open`
-dependencies, which also removes the `--copy` and `--open` flags. On Linux
+dependencies, which also removes the `copy` and `open` subcommands. On Linux
 under X11 the clipboard is owned by the running process, so the copied URL may
 not persist after forgelink exits. macOS and Windows are unaffected.
 
 It works from any subdirectory inside the repository:
 
 ```sh
-$ cd src && forgelink main.rs
+$ cd src && forgelink print main.rs
 https://github.com/user/repo/blob/abc123def.../src/main.rs
 ```
 
@@ -110,15 +95,15 @@ You can also pass an absolute path to link to a file in any repository,
 regardless of your current directory:
 
 ```sh
-$ forgelink ~/Developer/other-repo/src/main.rs
+$ forgelink print ~/Developer/other-repo/src/main.rs
 https://github.com/user/other-repo/blob/abc123def.../src/main.rs
 ```
 
 ## Editor integration
 
-forgelink takes a `path:line` argument and prints a URL, so any editor that can
-run a shell command with the current buffer path and cursor line can bind it
-directly, with no plugin required.
+The file argument accepts `path:line` syntax, so any editor that can run a shell
+command with the current buffer path and cursor line can bind it with no plugin
+required. Use `copy` to copy directly, or `print` to capture stdout yourself.
 
 ### Helix
 
@@ -126,7 +111,7 @@ In `~/.config/helix/config.toml`:
 
 ```toml
 [keys.normal.space]
-o = ":sh forgelink \"%{file_path_absolute}:%{cursor_line}\" --copy --quiet"
+o = ":sh forgelink copy \"%{file_path_absolute}:%{cursor_line}\""
 ```
 
 `space o` copies a link to the current line. `%{file_path_absolute}` is used so
@@ -134,7 +119,8 @@ it works regardless of the directory Helix was launched from.
 
 If you are using a version released before
 [helix-editor/helix#12989](https://github.com/helix-editor/helix/pull/12989) was
-merged (i.e.: 25.07.1), you should use `%{buffer_name}` in place of `%{file_path_absolute}`.
+merged (i.e.: 25.07.1), you should use `%{buffer_name}` in place of
+`%{file_path_absolute}`.
 
 ### Kakoune
 
@@ -142,23 +128,23 @@ In `~/.config/kak/kakrc`:
 
 ```kak
 define-command -docstring 'copy a forge link to the current line' forge-link %{
-    nop %sh{ forgelink "$kak_buffile:$kak_cursor_line" --copy --quiet }
+    nop %sh{ forgelink copy "$kak_buffile:$kak_cursor_line" }
 }
 map global user o ': forge-link<ret>' -docstring 'forge link'
 ```
 
 ### Neovim
 
-The following is a Lua implementation for using forgelink in Neovim. It will
-send a link to the file path in normal mode and a link to the line(s) selected
-in visual mode to the system clipboard.
+The following is a Lua implementation for using forgelink in Neovim. It copies
+a link to the file path in normal mode and a link to the line(s) selected in
+visual mode to the system clipboard.
 
 ```lua
 if vim.fn.exepath('forgelink') ~= '' then
     vim.keymap.set('n', '<leader>cf',
         function()
             local curFile = vim.api.nvim_buf_get_name(0)
-            local output = vim.fn.system({ 'forgelink', curFile })
+            local output = vim.fn.system({ 'forgelink', 'print', curFile })
             vim.fn.setreg('+', vim.trim(output))
         end,
         { desc = "Copy URL to Git forge for current file to clipboard" }
@@ -170,7 +156,7 @@ if vim.fn.exepath('forgelink') ~= '' then
             local startLine = vim.fn.line("'<")
             local endLine = vim.fn.line("'>")
             local lineRef = startLine == endLine and tostring(startLine) or (startLine .. '-' .. endLine)
-            local output = vim.fn.system({ 'forgelink', curFile .. ':' .. lineRef })
+            local output = vim.fn.system({ 'forgelink', 'print', curFile .. ':' .. lineRef })
             vim.fn.setreg('+', vim.trim(output))
         end,
         { desc = "Copy URL to Git forge for current file with selected line numbers to clipboard" }
