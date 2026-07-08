@@ -126,7 +126,7 @@ In `~/.config/helix/config.toml`:
 
 ```toml
 [keys.normal.space]
-o = ":sh forgelink %{file_path_absolute}:%{cursor_line} --copy --quiet"
+o = ":sh forgelink \"%{file_path_absolute}:%{cursor_line}\" --copy --quiet"
 ```
 
 `space o` copies a link to the current line. `%{file_path_absolute}` is used so
