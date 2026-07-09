@@ -45,7 +45,7 @@ pub enum GitRef {
     Commit(String),
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum RefSpec {
     #[default]
     Commit,
