@@ -61,6 +61,7 @@ pub enum Lines {
 }
 
 impl Lines {
+    #[must_use]
     pub fn single(line: NonZero<u32>) -> Self {
         Lines::Single(line)
     }
@@ -72,12 +73,14 @@ impl Lines {
         Ok(Lines::Range(start, end))
     }
 
+    #[must_use]
     pub fn start(&self) -> NonZero<u32> {
         match self {
             Lines::Single(n) | Lines::Range(n, _) => *n,
         }
     }
 
+    #[must_use]
     pub fn end(&self) -> NonZero<u32> {
         match self {
             Lines::Single(n) | Lines::Range(_, n) => *n,
@@ -94,6 +97,7 @@ pub struct LinkRequest {
     pub lines: Option<Lines>,
 }
 
+#[must_use]
 pub fn detect_forge(host: &str) -> Option<impl Forge + use<>> {
     forge::detect(host)
 }
