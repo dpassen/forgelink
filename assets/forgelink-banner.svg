@@ -91,8 +91,8 @@
     Generate stable links to code on Git forges.
   </text>
 
-  <g transform="translate(320 215)">
-    <rect width="760" height="72" rx="18" fill="#020617" stroke="#334155" />
+  <g transform="translate(305 215)">
+    <rect width="885" height="72" rx="18" fill="#020617" stroke="#334155" />
     <text
       x="28"
       y="46"
