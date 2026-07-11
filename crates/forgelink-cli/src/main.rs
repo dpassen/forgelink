@@ -1,7 +1,7 @@
 use std::num::NonZero;
 
 use clap::{Args as ClapArgs, Parser, Subcommand};
-use forgelink::Lines;
+use forgelink::{Lines, RefSpec};
 
 #[derive(Parser)]
 #[command(
@@ -108,9 +108,9 @@ fn main() -> anyhow::Result<()> {
 fn build_url(cwd: &std::path::Path, file_args: &FileArgs) -> anyhow::Result<String> {
     let (file, lines) = parse_file_arg(&file_args.file)?;
     let git_ref = if file_args.branch {
-        forgelink::RefSpec::Branch
+        RefSpec::Branch
     } else {
-        forgelink::RefSpec::Commit
+        RefSpec::Commit
     };
     forgelink::build_link(cwd, &file_args.remote, file, lines, git_ref).map_err(Into::into)
 }
