@@ -1,5 +1,7 @@
 # forgelink
 
+![forgelink banner](https://raw.githubusercontent.com/dpassen/forgelink/main/assets/forgelink-banner.svg)
+
 [![crates.io](https://img.shields.io/crates/v/forgelink.svg)](https://crates.io/crates/forgelink)
 
 Forge detection and URL generation for hosted git repositories.
