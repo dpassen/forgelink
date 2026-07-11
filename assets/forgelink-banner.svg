@@ -94,7 +94,7 @@
   <g transform="translate(305 215)">
     <rect width="885" height="72" rx="18" fill="#020617" stroke="#334155" />
     <text
-      x="28"
+      x="25"
       y="46"
       fill="#94A3B8"
       font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
@@ -116,9 +116,10 @@
       stroke-linejoin="round"
     />
     <text
-      x="420"
+      x="857"
       y="46"
       fill="#F97316"
+      text-anchor="end"
       font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
       font-size="25"
     >
