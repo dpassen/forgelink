@@ -138,7 +138,9 @@ pub fn current_branch(path: &Path) -> Result<GitRef> {
 pub fn project_link(path: &Path, remote_name: &str) -> Result<String> {
     let repo = remote::discover(path)?;
     let (host, dir) = remote::remote(&repo, remote_name)?;
-    let forge = detect_forge(&host).ok_or_else(|| Error::UnknownForge(host.clone()))?;
+    let Some(forge) = detect_forge(&host) else {
+        return Err(Error::UnknownForge(host));
+    };
     Ok(forge.project_url(&host, &dir))
 }
 
@@ -204,7 +206,9 @@ pub fn build_link(
         .collect::<Result<Vec<_>>>()?
         .join("/");
 
-    let forge = detect_forge(&host).ok_or_else(|| Error::UnknownForge(host.clone()))?;
+    let Some(forge) = detect_forge(&host) else {
+        return Err(Error::UnknownForge(host));
+    };
     let req = LinkRequest {
         host,
         dir,
