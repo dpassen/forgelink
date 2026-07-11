@@ -201,10 +201,9 @@ pub fn build_link(
     let relative = resolved
         .strip_prefix(&root)
         .map_err(|_| Error::FileOutsideRepository(file.to_string()))?
-        .components()
-        .map(|c| c.as_os_str().to_str().ok_or(Error::NonUtf8Path))
-        .collect::<Result<Vec<_>>>()?
-        .join("/");
+        .to_str()
+        .ok_or(Error::NonUtf8Path)?
+        .replace(std::path::MAIN_SEPARATOR, "/");
 
     let Some(forge) = detect_forge(&host) else {
         return Err(Error::UnknownForge(host));
