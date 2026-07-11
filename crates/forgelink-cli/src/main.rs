@@ -93,7 +93,7 @@ fn main() -> anyhow::Result<()> {
         #[cfg(feature = "clipboard")]
         Command::Copy(file_args) => {
             let url = build_url(&cwd, &file_args)?;
-            copy_to_clipboard(&url)?;
+            arboard::Clipboard::new()?.set_text(url)?;
         }
         #[cfg(feature = "browser")]
         Command::Open(file_args) => {
@@ -113,13 +113,6 @@ fn build_url(cwd: &std::path::Path, file_args: &FileArgs) -> anyhow::Result<Stri
         RefSpec::Commit
     };
     forgelink::build_link(cwd, &file_args.remote, file, lines, git_ref).map_err(Into::into)
-}
-
-#[cfg(feature = "clipboard")]
-fn copy_to_clipboard(url: &str) -> anyhow::Result<()> {
-    let mut clipboard = arboard::Clipboard::new()?;
-    clipboard.set_text(url)?;
-    Ok(())
 }
 
 #[cfg(test)]
