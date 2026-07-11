@@ -1,5 +1,7 @@
 # forgelink
 
+![forgelink banner](https://raw.githubusercontent.com/dpassen/forgelink/main/assets/forgelink-banner.svg)
+
 [![crates.io](https://img.shields.io/crates/v/forgelink-cli.svg)](https://crates.io/crates/forgelink-cli)
 [![test](https://github.com/dpassen/forgelink/actions/workflows/test.yaml/badge.svg)](https://github.com/dpassen/forgelink/actions/workflows/test.yaml)
 [![lint](https://github.com/dpassen/forgelink/actions/workflows/lint.yaml/badge.svg)](https://github.com/dpassen/forgelink/actions/workflows/lint.yaml)
