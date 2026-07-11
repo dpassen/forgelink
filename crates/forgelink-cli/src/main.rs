@@ -50,13 +50,12 @@ struct FileArgs {
 }
 
 fn parse_file_arg(raw: &str) -> anyhow::Result<(&str, Option<Lines>)> {
-    let Some(colon) = raw.rfind(':') else {
-        return Ok((raw, None));
-    };
-    match parse_line_spec(&raw[colon + 1..])? {
-        Some(lines) => Ok((&raw[..colon], Some(lines))),
-        None => Ok((raw, None)),
+    if let Some(colon) = raw.rfind(':')
+        && let Some(lines) = parse_line_spec(&raw[colon + 1..])?
+    {
+        return Ok((&raw[..colon], Some(lines)));
     }
+    Ok((raw, None))
 }
 
 fn is_digits(s: &str) -> bool {
