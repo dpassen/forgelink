@@ -66,6 +66,11 @@ impl Lines {
         Lines::Single(line)
     }
 
+    /// Creates an inclusive line range.
+    ///
+    /// # Errors
+    ///
+    /// Fails if `end` comes before `start`.
     pub fn range(start: NonZero<u32>, end: NonZero<u32>) -> Result<Self> {
         if end < start {
             return Err(Error::InvalidLineRange { start, end });
@@ -102,16 +107,34 @@ pub fn detect_forge(host: &str) -> Option<impl Forge + use<>> {
     forge::detect(host)
 }
 
+/// Resolves `path` to the current `HEAD` commit.
+///
+/// # Errors
+///
+/// Fails if `path` is not in a Git repository, or if `HEAD` does not point at a
+/// commit.
 pub fn resolve_ref(path: &Path) -> Result<GitRef> {
     let repo = remote::discover(path)?;
     remote::head_commit(&repo)
 }
 
+/// Resolves `path` to the current branch.
+///
+/// # Errors
+///
+/// Fails if `path` is not in a Git repository, `HEAD` is detached, or the branch
+/// name is not valid UTF-8.
 pub fn current_branch(path: &Path) -> Result<GitRef> {
     let repo = remote::discover(path)?;
     remote::current_branch(&repo)
 }
 
+/// Builds a URL for the repository project page.
+///
+/// # Errors
+///
+/// Fails if `path` is not in a Git repository, the remote is missing or invalid,
+/// or the forge is unsupported.
 pub fn project_link(path: &Path, remote_name: &str) -> Result<String> {
     let repo = remote::discover(path)?;
     let (host, dir) = remote::remote(&repo, remote_name)?;
@@ -119,6 +142,16 @@ pub fn project_link(path: &Path, remote_name: &str) -> Result<String> {
     Ok(forge.project_url(&host, &dir))
 }
 
+/// Builds a URL for `file`, optionally with line anchors.
+///
+/// Relative paths are resolved against `path`.
+///
+/// # Errors
+///
+/// Fails if `path` is not in a Git repository, the remote is missing or invalid,
+/// the forge is unsupported, or `file` is outside the repository.
+///
+/// With [`RefSpec::Branch`], this also fails on a detached `HEAD`.
 pub fn build_link(
     path: &Path,
     remote_name: &str,
