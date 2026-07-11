@@ -21,7 +21,7 @@ pub fn remote(repo: &gix::Repository, remote_name: &str) -> Result<(String, Stri
 
 pub fn root(repo: &gix::Repository) -> Result<PathBuf> {
     let root = repo.workdir().ok_or(Error::BareRepository)?;
-    Ok(root.canonicalize()?)
+    gix::path::realpath(root).map_err(|e| Error::Io(std::io::Error::other(e)))
 }
 
 pub fn head_commit(repo: &gix::Repository) -> Result<GitRef> {

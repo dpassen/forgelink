@@ -159,34 +159,44 @@ pub fn build_link(
     lines: Option<Lines>,
     git_ref: RefSpec,
 ) -> Result<String> {
-    let file_path = Path::new(file);
+    let file_path = dunce::simplified(Path::new(file));
+    let base = dunce::simplified(path);
     let absolute = if file_path.is_absolute() {
         file_path.to_path_buf()
     } else {
-        path.join(file_path)
+        base.join(file_path)
+    };
+    let discovery_path = if file_path.is_absolute() {
+        absolute.as_path()
+    } else {
+        base
     };
 
-    let discovery_start = nearest_existing_dir(&absolute).ok_or_else(|| {
-        Error::Io(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("{file}: no existing directory to search for a repository"),
-        ))
-    })?;
+    let discovery_start = discovery_path
+        .ancestors()
+        .find(|p| p.is_dir())
+        .ok_or_else(|| {
+            Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("{file}: no existing directory to search for a repository"),
+            ))
+        })?;
     let repo = remote::discover(discovery_start)?;
 
     let (host, dir) = remote::remote(&repo, remote_name)?;
     let root = remote::root(&repo)?;
+    let resolved_parent = gix::path::realpath(absolute.parent().unwrap_or(&absolute))
+        .map_err(|e| Error::Io(std::io::Error::other(e)))?;
+    let resolved = match absolute.file_name() {
+        Some(file_name) => resolved_parent.join(file_name),
+        None => resolved_parent,
+    };
     let git_ref = match git_ref {
         RefSpec::Commit => remote::head_commit(&repo)?,
         RefSpec::Branch => remote::current_branch(&repo)?,
     };
 
-    let canonical = match absolute.parent() {
-        Some(parent) => canonicalize_lenient(parent).join(absolute.file_name().unwrap_or_default()),
-        None => absolute,
-    };
-
-    let relative = canonical
+    let relative = resolved
         .strip_prefix(&root)
         .map_err(|_| Error::FileOutsideRepository(file.to_string()))?
         .components()
@@ -205,37 +215,11 @@ pub fn build_link(
     Ok(forge.file_url(&req))
 }
 
-fn nearest_existing_dir(path: &Path) -> Option<&Path> {
-    path.ancestors().find(|p| p.is_dir())
-}
-
-fn canonicalize_lenient(path: &Path) -> std::path::PathBuf {
-    let mut suffix = Vec::new();
-    let mut current = path;
-    loop {
-        if let Ok(base) = current.canonicalize() {
-            let mut result = base;
-            while let Some(name) = suffix.pop() {
-                result.push(name);
-            }
-            return result;
-        }
-        match (current.file_name(), current.parent()) {
-            (Some(name), Some(parent)) => {
-                suffix.push(name.to_owned());
-                current = parent;
-            }
-            _ => return path.to_path_buf(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs;
     use std::io::Write;
-    use std::path::PathBuf;
 
     fn init_repo(url: &str) -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
@@ -258,39 +242,6 @@ mod tests {
             .detach();
         repo.commit("HEAD", "init", tree, gix::commit::NO_PARENT_IDS)
             .unwrap();
-    }
-
-    #[test]
-    fn nearest_existing_dir_walks_up_past_missing() {
-        let dir = tempfile::tempdir().unwrap();
-        let missing = dir.path().join("a").join("b").join("file.rs");
-        assert_eq!(nearest_existing_dir(&missing), Some(dir.path()));
-    }
-
-    #[test]
-    fn nearest_existing_dir_skips_the_file_itself() {
-        let dir = tempfile::tempdir().unwrap();
-        let file = dir.path().join("file.rs");
-        fs::write(&file, "").unwrap();
-        assert_eq!(nearest_existing_dir(&file), Some(dir.path()));
-    }
-
-    #[test]
-    fn canonicalize_lenient_resolves_existing() {
-        let dir = tempfile::tempdir().unwrap();
-        let sub = dir.path().join("a").join("b");
-        fs::create_dir_all(&sub).unwrap();
-        assert_eq!(canonicalize_lenient(&sub), sub.canonicalize().unwrap());
-    }
-
-    #[test]
-    fn canonicalize_lenient_appends_missing_tail() {
-        let dir = tempfile::tempdir().unwrap();
-        let existing = dir.path().join("a");
-        fs::create_dir_all(&existing).unwrap();
-        let missing = existing.join("b").join("c");
-        let expected: PathBuf = existing.canonicalize().unwrap().join("b").join("c");
-        assert_eq!(canonicalize_lenient(&missing), expected);
     }
 
     #[test]
@@ -329,6 +280,122 @@ mod tests {
     }
 
     #[test]
+    fn build_link_resolves_relative_path_from_subdirectory() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let src = dir.path().join("src");
+        fs::create_dir(&src).unwrap();
+        fs::write(src.join("main.rs"), "").unwrap();
+
+        let url = build_link(&src, "origin", "main.rs", None, RefSpec::Commit).unwrap();
+
+        assert!(url.ends_with("/src/main.rs"), "got {url}");
+    }
+
+    #[test]
+    fn build_link_normalizes_nonexistent_component_followed_by_parent() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let src = dir.path().join("src");
+        fs::create_dir(&src).unwrap();
+        fs::write(src.join("main.rs"), "").unwrap();
+
+        let url = build_link(
+            dir.path(),
+            "origin",
+            "src/missing/../main.rs",
+            None,
+            RefSpec::Commit,
+        )
+        .unwrap();
+
+        assert!(url.ends_with("/src/main.rs"), "got {url}");
+    }
+
+    #[test]
+    fn build_link_absolute_path_uses_target_repository() {
+        let current = init_repo("https://github.com/current/repo.git");
+        commit_empty(current.path());
+        let target = init_repo("https://github.com/target/repo.git");
+        commit_empty(target.path());
+        let file = target.path().join("src").join("main.rs");
+        fs::create_dir(file.parent().unwrap()).unwrap();
+        fs::write(&file, "").unwrap();
+
+        let url = build_link(
+            current.path(),
+            "origin",
+            file.to_str().unwrap(),
+            None,
+            RefSpec::Commit,
+        )
+        .unwrap();
+
+        assert!(
+            url.starts_with("https://github.com/target/repo/blob/"),
+            "got {url}"
+        );
+        assert!(url.ends_with("/src/main.rs"), "got {url}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn build_link_resolves_symlink_within_repository() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let src = dir.path().join("src");
+        fs::create_dir(&src).unwrap();
+        fs::write(src.join("main.rs"), "").unwrap();
+        std::os::unix::fs::symlink(&src, dir.path().join("source")).unwrap();
+
+        let url = build_link(
+            dir.path(),
+            "origin",
+            "source/main.rs",
+            None,
+            RefSpec::Commit,
+        )
+        .unwrap();
+
+        assert!(url.ends_with("/src/main.rs"), "got {url}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn build_link_preserves_final_symlink() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let src = dir.path().join("src");
+        fs::create_dir(&src).unwrap();
+        fs::write(src.join("main.rs"), "").unwrap();
+        std::os::unix::fs::symlink("main.rs", src.join("link.rs")).unwrap();
+
+        let url = build_link(dir.path(), "origin", "src/link.rs", None, RefSpec::Commit).unwrap();
+
+        assert!(url.ends_with("/src/link.rs"), "got {url}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn build_link_does_not_link_through_symlink_outside_repository() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("stray.rs"), "").unwrap();
+        std::os::unix::fs::symlink(outside.path(), dir.path().join("outside")).unwrap();
+
+        let result = build_link(
+            dir.path(),
+            "origin",
+            "outside/stray.rs",
+            None,
+            RefSpec::Commit,
+        );
+
+        assert!(matches!(result, Err(Error::FileOutsideRepository(_))));
+    }
+
+    #[test]
     fn build_link_rejects_file_outside_repo() {
         let dir = init_repo("https://github.com/user/repo.git");
         commit_empty(dir.path());
@@ -344,6 +411,23 @@ mod tests {
             RefSpec::Commit,
         );
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn build_link_rejects_nonexistent_path_traversal_outside_repo() {
+        let dir = init_repo("https://github.com/user/repo.git");
+        commit_empty(dir.path());
+        let root = dir.path().canonicalize().unwrap();
+
+        let err = build_link(
+            &root,
+            "origin",
+            "missing/../../outside.rs",
+            None,
+            RefSpec::Commit,
+        );
+
+        assert!(matches!(err, Err(Error::FileOutsideRepository(_))));
     }
 
     #[test]
