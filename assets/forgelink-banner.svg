@@ -92,7 +92,7 @@
   </text>
 
   <g transform="translate(305 215)">
-    <rect width="885" height="72" rx="18" fill="#020617" stroke="#334155" />
+    <rect width="870" height="72" rx="18" fill="#020617" stroke="#334155" />
     <text
       x="25"
       y="46"
@@ -116,7 +116,7 @@
       stroke-linejoin="round"
     />
     <text
-      x="857"
+      x="842"
       y="46"
       fill="#F97316"
       text-anchor="end"
