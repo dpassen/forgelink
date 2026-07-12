@@ -110,28 +110,6 @@ pub fn detect_forge(host: &str) -> Option<impl Forge + use<>> {
     forge::detect(host)
 }
 
-/// Resolves `path` to the current `HEAD` commit.
-///
-/// # Errors
-///
-/// Fails if `path` is not in a Git repository, or if `HEAD` does not point at a
-/// commit.
-pub fn resolve_ref(path: &Path) -> Result<GitRef> {
-    let repo = remote::discover(path)?;
-    remote::head_commit(&repo)
-}
-
-/// Resolves `path` to the current branch.
-///
-/// # Errors
-///
-/// Fails if `path` is not in a Git repository, `HEAD` is detached, or the branch
-/// name is not valid UTF-8.
-pub fn current_branch(path: &Path) -> Result<GitRef> {
-    let repo = remote::discover(path)?;
-    remote::current_branch(&repo)
-}
-
 /// Builds a URL for the repository project page.
 ///
 /// # Errors
@@ -440,7 +418,8 @@ mod tests {
     fn build_link_branch_uses_branch_name() {
         let dir = init_repo("https://github.com/user/repo.git");
         commit_empty(dir.path());
-        let GitRef::Branch(branch) = current_branch(dir.path()).unwrap() else {
+        let repo = remote::discover(dir.path()).unwrap();
+        let GitRef::Branch(branch) = remote::current_branch(&repo).unwrap() else {
             panic!("expected a branch");
         };
 
