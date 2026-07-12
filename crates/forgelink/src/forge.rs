@@ -14,22 +14,46 @@ pub trait Forge {
     fn project_url(&self, host: &str, dir: &str) -> String;
 }
 
+/// Looks for an exact match against a known forge host.
+///
+/// This does not match subdomains.
+fn detect_by_known_host(host: &str) -> Option<KnownForge> {
+    [
+        ("git.sr.ht", KnownForge::SourceHut),
+        ("codeberg.org", KnownForge::Codeberg),
+        ("forge.fedoraproject.org", KnownForge::Codeberg),
+    ]
+    .into_iter()
+    .find_map(|(known, forge)| host.eq_ignore_ascii_case(known).then_some(forge))
+}
+
+/// Looks for a forge name in a complete DNS label.
+///
+/// This does not match when more than one forge name is present.
+fn detect_by_forge_label(host: &str) -> Option<KnownForge> {
+    let mut matches = [
+        ("github", KnownForge::GitHub),
+        ("gitlab", KnownForge::GitLab),
+        ("bitbucket", KnownForge::Bitbucket),
+    ]
+    .into_iter()
+    .filter_map(|(label, forge)| {
+        host.split('.')
+            .any(|part| part.eq_ignore_ascii_case(label))
+            .then_some(forge)
+    });
+
+    let forge = matches.next()?;
+    matches.next().is_none().then_some(forge)
+}
+
 pub(crate) fn detect(host: &str) -> Option<impl Forge + use<>> {
     let host = host.split(':').next().unwrap_or(host);
-    let forge = if host.contains("github") {
-        KnownForge::GitHub
-    } else if host.contains("gitlab") {
-        KnownForge::GitLab
-    } else if host == "git.sr.ht" {
-        KnownForge::SourceHut
-    } else if host.contains("bitbucket") {
-        KnownForge::Bitbucket
-    } else if host == "codeberg.org" || host == "forge.fedoraproject.org" {
-        KnownForge::Codeberg
-    } else {
-        return None;
-    };
-    Some(forge)
+
+    if let Some(forge) = detect_by_known_host(host) {
+        return Some(forge);
+    }
+    detect_by_forge_label(host)
 }
 
 enum KnownForge {
@@ -203,6 +227,7 @@ mod tests {
     fn detects_sourcehut() {
         assert!(detect("git.sr.ht").is_some());
         assert!(detect("sr.ht").is_none());
+        assert!(detect("subdomain.git.sr.ht").is_none());
     }
 
     #[test]
@@ -214,11 +239,32 @@ mod tests {
     fn detects_codeberg() {
         assert!(detect("codeberg.org").is_some());
         assert!(detect("forge.fedoraproject.org").is_some());
+        assert!(detect("subdomain.codeberg.org").is_none());
+        assert!(detect("subdomain.forge.fedoraproject.org").is_none());
     }
 
     #[test]
     fn unknown_host_returns_none() {
         assert!(detect("example.com").is_none());
+    }
+
+    #[test]
+    fn detection_is_case_insensitive() {
+        assert!(detect("GITHUB.COM").is_some());
+        assert!(detect("CODEBERG.ORG").is_some());
+    }
+
+    #[test]
+    fn forge_names_must_be_complete_dns_labels() {
+        assert!(detect("notgithub.example").is_none());
+        assert!(detect("gitlabish.example").is_none());
+        assert!(detect("mybitbucket.example").is_none());
+    }
+
+    #[test]
+    fn ambiguous_forge_labels_return_none() {
+        assert!(detect("github.gitlab.com").is_none());
+        assert!(detect("gitlab.bitbucket.example.com").is_none());
     }
 
     // --- github ---
