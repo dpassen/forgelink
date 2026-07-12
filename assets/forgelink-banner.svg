@@ -103,13 +103,7 @@
       src/lib.rs:42
     </text>
     <path
-      d="M250 36h135"
-      stroke="#475569"
-      stroke-width="4"
-      stroke-linecap="round"
-    />
-    <path
-      d="M370 22l18 14-18 14"
+      d="M250 36h126m-18-14 18 14-18 14"
       stroke="#475569"
       stroke-width="4"
       stroke-linecap="round"
