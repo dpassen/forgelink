@@ -102,6 +102,9 @@ pub struct LinkRequest {
     pub lines: Option<Lines>,
 }
 
+/// Detects the forge for `host`.
+///
+/// Returns `None` if the forge is unsupported.
 #[must_use]
 pub fn detect_forge(host: &str) -> Option<impl Forge + use<>> {
     forge::detect(host)
