@@ -20,7 +20,7 @@ This is the library crate behind the [`forgelink`](https://crates.io/crates/forg
 
 ```toml
 [dependencies]
-forgelink = "0.3"
+forgelink = "0.4"
 ```
 
 ```rust
