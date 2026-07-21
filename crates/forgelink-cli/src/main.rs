@@ -111,7 +111,8 @@ fn build_url(cwd: &std::path::Path, file_args: &FileArgs) -> anyhow::Result<Stri
     } else {
         RefSpec::Commit
     };
-    forgelink::build_link(cwd, &file_args.remote, file, lines, git_ref).map_err(Into::into)
+    forgelink::build_link(cwd, &file_args.remote, file, lines, git_ref, |_| None)
+        .map_err(Into::into)
 }
 
 #[cfg(test)]
