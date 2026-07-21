@@ -1,7 +1,9 @@
 mod forge;
 mod remote;
+mod target;
 
 pub use forge::Forge;
+pub use target::ForgeTarget;
 
 use std::num::NonZero;
 use std::path::Path;
@@ -18,6 +20,8 @@ pub enum Error {
     InvalidRemoteUrl(String),
     #[error("unrecognized forge: {0}")]
     UnknownForge(String),
+    #[error("invalid base URL: {0}")]
+    InvalidBaseUrl(String),
     #[error("bare repositories are not supported")]
     BareRepository,
     #[error("could not resolve HEAD to a commit")]
@@ -95,7 +99,6 @@ impl Lines {
 
 #[derive(Debug, Clone)]
 pub struct LinkRequest {
-    pub host: String,
     pub dir: String,
     pub file: String,
     pub git_ref: GitRef,
@@ -106,28 +109,45 @@ pub struct LinkRequest {
 ///
 /// Returns `None` if the forge is unsupported.
 #[must_use]
-pub fn detect_forge(host: &str) -> Option<impl Forge + use<>> {
+pub fn detect_forge(host: &str) -> Option<Forge> {
     forge::detect(host)
+}
+
+fn detected_target(host: String) -> Result<ForgeTarget> {
+    let Some(forge) = detect_forge(&host) else {
+        return Err(Error::UnknownForge(host));
+    };
+    ForgeTarget::new(&format!("https://{host}"), forge)
 }
 
 /// Builds a URL for the repository project page.
 ///
+/// `target_for_host` receives the original host parsed from the Git remote. If
+/// it returns `None`, the target is inferred from that host.
+///
 /// # Errors
 ///
 /// Fails if `path` is not in a Git repository, the remote is missing or invalid,
-/// or the forge is unsupported.
-pub fn project_link(path: &Path, remote_name: &str) -> Result<String> {
+/// or neither `target_for_host` nor automatic detection supplies a target.
+pub fn project_link(
+    path: &Path,
+    remote_name: &str,
+    target_for_host: impl FnOnce(&str) -> Option<ForgeTarget>,
+) -> Result<String> {
     let repo = remote::discover(path)?;
     let (host, dir) = remote::remote(&repo, remote_name)?;
-    let Some(forge) = detect_forge(&host) else {
-        return Err(Error::UnknownForge(host));
+    let target = match target_for_host(&host) {
+        Some(target) => target,
+        None => detected_target(host)?,
     };
-    Ok(forge.project_url(&host, &dir))
+    Ok(target.project_url(&dir))
 }
 
 /// Builds a URL for `file`, optionally with line anchors.
 ///
-/// Relative paths are resolved against `path`.
+/// Relative paths are resolved against `path`. `target_for_host` receives the
+/// original host parsed from the Git remote. If it returns `None`, the target is
+/// inferred from that host.
 ///
 /// # Errors
 ///
@@ -141,6 +161,7 @@ pub fn build_link(
     file: &str,
     lines: Option<Lines>,
     git_ref: RefSpec,
+    target_for_host: impl FnOnce(&str) -> Option<ForgeTarget>,
 ) -> Result<String> {
     let file_path = dunce::simplified(Path::new(file));
     let base = dunce::simplified(path);
@@ -186,17 +207,17 @@ pub fn build_link(
         .ok_or(Error::NonUtf8Path)?
         .replace(std::path::MAIN_SEPARATOR, "/");
 
-    let Some(forge) = detect_forge(&host) else {
-        return Err(Error::UnknownForge(host));
+    let target = match target_for_host(&host) {
+        Some(target) => target,
+        None => detected_target(host)?,
     };
     let req = LinkRequest {
-        host,
         dir,
         file: relative,
         git_ref,
         lines,
     };
-    Ok(forge.file_url(&req))
+    Ok(target.file_url(&req))
 }
 
 #[cfg(test)]
@@ -228,6 +249,10 @@ mod tests {
             .unwrap();
     }
 
+    fn automatic_target(_: &str) -> Option<ForgeTarget> {
+        None
+    }
+
     #[test]
     fn build_link_end_to_end() {
         let dir = init_repo("https://github.com/user/repo.git");
@@ -243,6 +268,7 @@ mod tests {
             "src/main.rs",
             Some(lines),
             RefSpec::Commit,
+            automatic_target,
         )
         .unwrap();
 
@@ -258,7 +284,15 @@ mod tests {
         let dir = init_repo("https://github.com/user/repo.git");
         commit_empty(dir.path());
 
-        let url = build_link(dir.path(), "origin", "src/ghost.rs", None, RefSpec::Commit).unwrap();
+        let url = build_link(
+            dir.path(),
+            "origin",
+            "src/ghost.rs",
+            None,
+            RefSpec::Commit,
+            automatic_target,
+        )
+        .unwrap();
 
         assert!(url.ends_with("/src/ghost.rs"), "got {url}");
     }
@@ -271,7 +305,15 @@ mod tests {
         fs::create_dir(&src).unwrap();
         fs::write(src.join("main.rs"), "").unwrap();
 
-        let url = build_link(&src, "origin", "main.rs", None, RefSpec::Commit).unwrap();
+        let url = build_link(
+            &src,
+            "origin",
+            "main.rs",
+            None,
+            RefSpec::Commit,
+            automatic_target,
+        )
+        .unwrap();
 
         assert!(url.ends_with("/src/main.rs"), "got {url}");
     }
@@ -290,6 +332,7 @@ mod tests {
             "src/missing/../main.rs",
             None,
             RefSpec::Commit,
+            automatic_target,
         )
         .unwrap();
 
@@ -312,6 +355,7 @@ mod tests {
             file.to_str().unwrap(),
             None,
             RefSpec::Commit,
+            automatic_target,
         )
         .unwrap();
 
@@ -338,6 +382,7 @@ mod tests {
             "source/main.rs",
             None,
             RefSpec::Commit,
+            automatic_target,
         )
         .unwrap();
 
@@ -354,7 +399,15 @@ mod tests {
         fs::write(src.join("main.rs"), "").unwrap();
         std::os::unix::fs::symlink("main.rs", src.join("link.rs")).unwrap();
 
-        let url = build_link(dir.path(), "origin", "src/link.rs", None, RefSpec::Commit).unwrap();
+        let url = build_link(
+            dir.path(),
+            "origin",
+            "src/link.rs",
+            None,
+            RefSpec::Commit,
+            automatic_target,
+        )
+        .unwrap();
 
         assert!(url.ends_with("/src/link.rs"), "got {url}");
     }
@@ -374,6 +427,7 @@ mod tests {
             "outside/stray.rs",
             None,
             RefSpec::Commit,
+            automatic_target,
         );
 
         assert!(matches!(result, Err(Error::FileOutsideRepository(_))));
@@ -393,6 +447,7 @@ mod tests {
             stray.to_str().unwrap(),
             None,
             RefSpec::Commit,
+            automatic_target,
         );
         assert!(err.is_err());
     }
@@ -409,6 +464,7 @@ mod tests {
             "missing/../../outside.rs",
             None,
             RefSpec::Commit,
+            automatic_target,
         );
 
         assert!(matches!(err, Err(Error::FileOutsideRepository(_))));
@@ -423,7 +479,15 @@ mod tests {
             panic!("expected a branch");
         };
 
-        let url = build_link(dir.path(), "origin", "src/main.rs", None, RefSpec::Branch).unwrap();
+        let url = build_link(
+            dir.path(),
+            "origin",
+            "src/main.rs",
+            None,
+            RefSpec::Branch,
+            automatic_target,
+        )
+        .unwrap();
 
         assert_eq!(
             url,
@@ -439,15 +503,70 @@ mod tests {
         let sha = repo.head_commit().unwrap().id.to_hex().to_string();
         fs::write(dir.path().join(".git").join("HEAD"), format!("{sha}\n")).unwrap();
 
-        let err = build_link(dir.path(), "origin", "src/main.rs", None, RefSpec::Branch);
+        let err = build_link(
+            dir.path(),
+            "origin",
+            "src/main.rs",
+            None,
+            RefSpec::Branch,
+            automatic_target,
+        );
         assert!(matches!(err, Err(Error::DetachedHead)));
     }
 
     #[test]
     fn project_link_end_to_end() {
         let dir = init_repo("git@github.com:user/repo.git");
-        let url = project_link(dir.path(), "origin").unwrap();
+        let url = project_link(dir.path(), "origin", automatic_target).unwrap();
         assert_eq!(url, "https://github.com/user/repo");
+    }
+
+    #[test]
+    fn build_link_accepts_target_for_ssh_alias() {
+        let dir = init_repo("git@gh-work:user/repo.git");
+        commit_empty(dir.path());
+        let expected_host = "gh-work".to_string();
+
+        let url = build_link(
+            dir.path(),
+            "origin",
+            "src/main.rs",
+            None,
+            RefSpec::Commit,
+            move |host| {
+                assert_eq!(host, expected_host);
+                drop(expected_host);
+                Some(ForgeTarget::new("https://github.com", Forge::GitHub).unwrap())
+            },
+        )
+        .unwrap();
+
+        assert!(
+            url.starts_with("https://github.com/user/repo/blob/"),
+            "got {url}"
+        );
+        assert!(url.ends_with("/src/main.rs"), "got {url}");
+    }
+
+    #[test]
+    fn project_link_accepts_enterprise_target() {
+        let dir = init_repo("git@git.company.tld:group/repo.git");
+
+        let url = project_link(dir.path(), "origin", |host| {
+            assert_eq!(host, "git.company.tld");
+            Some(ForgeTarget::new("https://company.tld/services/gitlab", Forge::GitLab).unwrap())
+        })
+        .unwrap();
+
+        assert_eq!(url, "https://company.tld/services/gitlab/group/repo");
+    }
+
+    #[test]
+    fn unknown_host_without_target_still_errors() {
+        let dir = init_repo("git@internal:user/repo.git");
+        let error = project_link(dir.path(), "origin", automatic_target).unwrap_err();
+
+        assert!(matches!(error, Error::UnknownForge(host) if host == "internal"));
     }
 
     #[test]
