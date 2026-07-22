@@ -2,6 +2,7 @@
 name = "forgelink"
 version = "0.4.0"
 edition = "2024"
+rust-version.workspace = true
 license = "MIT OR Apache-2.0"
 description = "Forge detection and URL generation for hosted git repositories"
 readme = "README.md"

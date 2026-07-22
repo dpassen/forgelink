@@ -2,6 +2,9 @@
 members = ["crates/forgelink", "crates/forgelink-cli"]
 resolver = "2"
 
+[workspace.package]
+rust-version = "1.88"
+
 [workspace.lints.clippy]
 format_push_string = "warn"
 missing_errors_doc = "warn"
