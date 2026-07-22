@@ -1,6 +1,10 @@
+mod config;
+
 use std::num::NonZero;
+use std::path::PathBuf;
 
 use clap::{Args as ClapArgs, Parser, Subcommand};
+use config::Config;
 use forgelink::{Lines, RefSpec};
 
 #[derive(Parser)]
@@ -13,15 +17,20 @@ use forgelink::{Lines, RefSpec};
         "  forgelink print src/main.rs\n",
         "  forgelink print src/main.rs:42\n",
         "  forgelink print --branch src/main.rs\n",
-        "  forgelink print --remote upstream src/main.rs",
+        "  forgelink print --remote upstream src/main.rs\n",
+        "  forgelink --config config.toml print src/main.rs",
     )
 )]
 struct Args {
+    /// Use this configuration file
+    #[arg(long, global = true, value_name = "PATH")]
+    config: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Command,
 }
 
-#[derive(Debug, PartialEq, Eq, Subcommand)]
+#[derive(Debug, PartialEq, Subcommand)]
 enum Command {
     /// Print a forge URL to standard output
     Print(FileArgs),
@@ -35,7 +44,7 @@ enum Command {
     Open(FileArgs),
 }
 
-#[derive(Debug, PartialEq, Eq, ClapArgs)]
+#[derive(Debug, PartialEq, ClapArgs)]
 struct FileArgs {
     /// File path, optionally with line number(s): src/main.rs, src/main.rs:42, src/main.rs:42-55
     file: String,
@@ -82,21 +91,22 @@ fn parse_line(s: &str) -> anyhow::Result<NonZero<u32>> {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let config = Config::load(args.config.as_deref())?;
     let cwd = std::env::current_dir()?;
 
     match args.command {
         Command::Print(file_args) => {
-            let url = build_url(&cwd, &file_args)?;
+            let url = build_url(&cwd, &file_args, &config)?;
             println!("{url}");
         }
         #[cfg(feature = "clipboard")]
         Command::Copy(file_args) => {
-            let url = build_url(&cwd, &file_args)?;
+            let url = build_url(&cwd, &file_args, &config)?;
             arboard::Clipboard::new()?.set_text(url)?;
         }
         #[cfg(feature = "browser")]
         Command::Open(file_args) => {
-            let url = build_url(&cwd, &file_args)?;
+            let url = build_url(&cwd, &file_args, &config)?;
             open::that(&url)?;
         }
     }
@@ -104,15 +114,21 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn build_url(cwd: &std::path::Path, file_args: &FileArgs) -> anyhow::Result<String> {
+fn build_url(
+    cwd: &std::path::Path,
+    file_args: &FileArgs,
+    config: &Config,
+) -> anyhow::Result<String> {
     let (file, lines) = parse_file_arg(&file_args.file)?;
     let git_ref = if file_args.branch {
         RefSpec::Branch
     } else {
         RefSpec::Commit
     };
-    forgelink::build_link(cwd, &file_args.remote, file, lines, git_ref, |_| None)
-        .map_err(Into::into)
+    forgelink::build_link(cwd, &file_args.remote, file, lines, git_ref, |host| {
+        config.target_for(host)
+    })
+    .map_err(Into::into)
 }
 
 #[cfg(test)]
@@ -122,6 +138,34 @@ mod tests {
     #[test]
     fn requires_subcommand() {
         assert!(Args::try_parse_from(["forgelink", "src/main.rs"]).is_err());
+    }
+
+    #[test]
+    fn parses_config_before_subcommand() {
+        let args = Args::try_parse_from([
+            "forgelink",
+            "--config",
+            "custom.toml",
+            "print",
+            "src/main.rs",
+        ])
+        .unwrap();
+
+        assert_eq!(args.config, Some(PathBuf::from("custom.toml")));
+    }
+
+    #[test]
+    fn parses_config_after_subcommand() {
+        let args = Args::try_parse_from([
+            "forgelink",
+            "print",
+            "--config",
+            "custom.toml",
+            "src/main.rs",
+        ])
+        .unwrap();
+
+        assert_eq!(args.config, Some(PathBuf::from("custom.toml")));
     }
 
     #[test]

@@ -101,6 +101,55 @@ $ forgelink print ~/Developer/other-repo/src/main.rs
 https://github.com/user/other-repo/blob/abc123def.../src/main.rs
 ```
 
+## Host configuration
+
+forgelink detects the forge from the hostname in the Git remote. Add a host
+entry for SSH aliases and forges on custom domains.
+
+```toml
+# git@gh-work:owner/repo.git
+[[hosts]]
+host = "gh-work"
+base-url = "https://github.com"
+forge = "github"
+
+# git@git.company.tld:group/repo.git
+[[hosts]]
+host = "git.company.tld"
+base-url = "https://git.company.tld"
+forge = "gitlab"
+```
+
+Host entries require all three fields:
+
+- `host` is the hostname from the Git remote.
+- `base-url` is the HTTP or HTTPS URL used to build links. It may include a
+  custom port or path prefix, but not credentials, a query, or a fragment.
+- `forge` is one of `github`, `gitlab`, `sourcehut`, `bitbucket`, or `codeberg`.
+
+Host matching is exact and case-insensitive. A matching entry skips automatic
+forge detection. Wildcards and chained mappings are not supported.
+
+Use `--config` to pick a file:
+
+```sh
+forgelink --config path/to/config.toml print src/main.rs
+```
+
+Otherwise, forgelink checks these locations in order:
+
+1. `$XDG_CONFIG_HOME/forgelink/config.toml`, when `XDG_CONFIG_HOME` is an
+   absolute path.
+2. The native platform configuration directory:
+   - Linux: `~/.config/forgelink/config.toml`
+   - macOS: `~/Library/Application Support/forgelink/config.toml`
+   - Windows: `%APPDATA%\forgelink\config.toml`
+
+forgelink uses the first applicable location in the order shown. It does not
+merge configuration files. A missing default file is ignored, while a missing
+file passed with `--config` is an error. forgelink does not read
+`~/.ssh/config`; add each SSH alias as a `host` entry.
+
 ## Editor integration
 
 The file argument accepts `path:line` syntax, so any editor that can run a shell

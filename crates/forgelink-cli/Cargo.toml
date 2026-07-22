@@ -20,8 +20,14 @@ workspace = true
 forgelink = { path = "../forgelink", version = "0.4.0" }
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
+directories = "6"
 arboard = { version = "3", optional = true }
 open = { version = "5", optional = true }
+serde = { version = "1", features = ["derive"] }
+toml = "1"
+
+[dev-dependencies]
+tempfile = "3"
 
 [features]
 default = ["clipboard", "browser"]
