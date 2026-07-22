@@ -22,7 +22,7 @@ forgelink = { path = "../forgelink", version = "0.4.0" }
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 directories = "6"
-arboard = { version = "3", optional = true }
+arboard = { version = "3", optional = true, default-features = false }
 open = { version = "5", optional = true }
 serde = { version = "1", features = ["derive"] }
 toml = "1"
