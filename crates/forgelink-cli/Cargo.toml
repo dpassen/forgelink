@@ -1,6 +1,6 @@
 [package]
 name = "forgelink-cli"
-version = "0.2.6"
+version = "0.3.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "CLI for generating shareable URLs to files in hosted git repositories"
