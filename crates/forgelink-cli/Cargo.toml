@@ -2,6 +2,7 @@
 name = "forgelink-cli"
 version = "0.3.0"
 edition = "2024"
+rust-version.workspace = true
 license = "MIT OR Apache-2.0"
 description = "CLI for generating shareable URLs to files in hosted git repositories"
 readme = "../../README.md"
