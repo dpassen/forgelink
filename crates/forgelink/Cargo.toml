@@ -15,7 +15,7 @@ workspace = true
 
 [dependencies]
 dunce = "1"
-gix = { version = "0.85", default-features = false, features = ["sha1"] }
+gix = { version = "0.86", default-features = false, features = ["sha1"] }
 thiserror = "2"
 url = "2"
 urlencoding = "2"

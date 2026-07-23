@@ -45,7 +45,7 @@ pub fn current_branch(repo: &gix::Repository) -> Result<GitRef> {
 }
 
 fn parse_remote_url(raw: &str) -> Result<(String, String)> {
-    let url = gix::url::parse(raw.into()).map_err(|e| Error::InvalidRemoteUrl(e.to_string()))?;
+    let url = gix::url::parse(raw).map_err(|e| Error::InvalidRemoteUrl(e.to_string()))?;
 
     let host = url
         .host()
