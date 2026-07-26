@@ -122,8 +122,9 @@ fn detected_target(host: String) -> Result<ForgeTarget> {
 
 /// Builds a URL for the repository project page.
 ///
-/// `target_for_host` receives the original host parsed from the Git remote. If
-/// it returns `None`, the target is inferred from that host.
+/// `target_for_host` receives the hostname from the remote fetch URL after Git
+/// URL rewrite rules are applied. If it returns `None`, the target is inferred
+/// from that host.
 ///
 /// # Errors
 ///
@@ -146,8 +147,8 @@ pub fn project_link(
 /// Builds a URL for `file`, optionally with line anchors.
 ///
 /// Relative paths are resolved against `path`. `target_for_host` receives the
-/// original host parsed from the Git remote. If it returns `None`, the target is
-/// inferred from that host.
+/// hostname from the remote fetch URL after Git URL rewrite rules are applied.
+/// If it returns `None`, the target is inferred from that host.
 ///
 /// # Errors
 ///

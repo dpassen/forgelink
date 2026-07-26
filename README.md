@@ -103,8 +103,9 @@ https://github.com/user/other-repo/blob/abc123def.../src/main.rs
 
 ## Host configuration
 
-forgelink detects the forge from the hostname in the Git remote. Add a host
-entry for SSH aliases and forges on custom domains.
+forgelink applies Git's `url.<base>.insteadOf` rules to the remote URL before
+detecting the forge. Aliases rewritten to a supported forge do not need a
+`host` entry. Add one for other SSH aliases and forges on custom domains.
 
 ```toml
 # git@gh-work:owner/repo.git
@@ -122,7 +123,7 @@ forge = "gitlab"
 
 Host entries require all three fields:
 
-- `host` is the hostname from the Git remote.
+- `host` is the hostname after Git URL rewrites are applied.
 - `base-url` is the HTTP or HTTPS URL used to build links. It may include a
   custom port or path prefix, but not credentials, a query, or a fragment.
 - `forge` is one of `github`, `gitlab`, `sourcehut`, `bitbucket`, or `codeberg`.
