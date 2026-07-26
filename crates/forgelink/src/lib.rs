@@ -11,11 +11,18 @@ use std::path::Path;
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     #[error("no git repository found")]
     RepositoryNotFound(#[source] BoxError),
     #[error("no '{0}' remote found")]
     NoRemote(String),
+    #[error("invalid '{name}' remote")]
+    InvalidRemote {
+        name: String,
+        #[source]
+        source: BoxError,
+    },
     #[error("invalid remote URL: {0}")]
     InvalidRemoteUrl(String),
     #[error("unrecognized forge: {0}")]
