@@ -314,6 +314,52 @@ fn project_link_applies_git_url_rewrites() {
 }
 
 #[test]
+fn project_link_reports_invalid_remote_configuration() {
+    let dir = init_repo("git@github.com:user/repo.git");
+    let config = dir.path().join(".git").join("config");
+    let mut file = fs::OpenOptions::new().append(true).open(config).unwrap();
+    writeln!(file, "[remote \"origin\"]\n\tfetch = ^").unwrap();
+
+    let error = project_link(dir.path(), "origin", automatic_target).unwrap_err();
+
+    assert!(matches!(
+        &error,
+        Error::InvalidRemote { name, .. } if name == "origin"
+    ));
+    assert_eq!(error.to_string(), "invalid 'origin' remote");
+    let source = <Error as std::error::Error>::source(&error).unwrap();
+    assert!(source.to_string().contains("fetch ref-spec"));
+}
+
+#[test]
+fn project_link_reports_invalid_remote_url() {
+    let dir = init_repo("https://[");
+
+    let error = project_link(dir.path(), "origin", automatic_target).unwrap_err();
+
+    assert!(matches!(error, Error::InvalidRemoteUrl(_)));
+}
+
+#[test]
+fn project_link_reports_invalid_rewritten_remote_url() {
+    let dir = init_repo("forgelink-test-invalid-rewrite:user/repo.git");
+    let config = dir.path().join(".git").join("config");
+    let mut file = fs::OpenOptions::new().append(true).open(config).unwrap();
+    writeln!(
+        file,
+        "[url \"https://[\"]\n\tinsteadOf = forgelink-test-invalid-rewrite:"
+    )
+    .unwrap();
+
+    let error = project_link(dir.path(), "origin", automatic_target).unwrap_err();
+
+    assert!(matches!(
+        error,
+        Error::InvalidRemoteUrl(message) if message.contains("rewritten fetch url")
+    ));
+}
+
+#[test]
 fn build_link_accepts_target_for_ssh_alias() {
     let dir = init_repo("git@gh-work:user/repo.git");
     commit_empty(dir.path());

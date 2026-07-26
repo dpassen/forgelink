@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use gix::bstr::ByteSlice;
+use gix::{bstr::ByteSlice, remote::find};
 
 use crate::{Error, GitRef, Result};
 
@@ -12,7 +12,17 @@ pub fn remote(repo: &gix::Repository, remote_name: &str) -> Result<(String, Stri
     let remote = repo
         .try_find_remote(remote_name)
         .ok_or_else(|| Error::NoRemote(remote_name.to_string()))?
-        .map_err(|error| Error::InvalidRemoteUrl(error.to_string()))?;
+        .map_err(|source| match source {
+            source @ (find::Error::Url { .. } | find::Error::Init(_)) => {
+                Error::InvalidRemoteUrl(source.to_string())
+            }
+            source @ (find::Error::RefSpec { .. } | find::Error::TagOpt(_)) => {
+                Error::InvalidRemote {
+                    name: remote_name.to_string(),
+                    source: Box::new(source),
+                }
+            }
+        })?;
     let url = remote
         .url(gix::remote::Direction::Fetch)
         .ok_or_else(|| Error::InvalidRemoteUrl("missing fetch URL".to_string()))?;
