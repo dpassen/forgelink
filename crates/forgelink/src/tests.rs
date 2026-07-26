@@ -298,6 +298,22 @@ fn project_link_end_to_end() {
 }
 
 #[test]
+fn project_link_applies_git_url_rewrites() {
+    let dir = init_repo("forgelink-test-gh:user/repo.git");
+    let config = dir.path().join(".git").join("config");
+    let mut file = fs::OpenOptions::new().append(true).open(config).unwrap();
+    writeln!(
+        file,
+        "[url \"git@github.com:\"]\n\tinsteadOf = forgelink-test-gh:"
+    )
+    .unwrap();
+
+    let url = project_link(dir.path(), "origin", automatic_target).unwrap();
+
+    assert_eq!(url, "https://github.com/user/repo");
+}
+
+#[test]
 fn build_link_accepts_target_for_ssh_alias() {
     let dir = init_repo("git@gh-work:user/repo.git");
     commit_empty(dir.path());

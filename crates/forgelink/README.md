@@ -41,9 +41,10 @@ let url = build_link(
 println!("{url}");
 ```
 
-The final closure receives the hostname parsed from the Git remote. Returning
-`None` uses automatic forge detection and an HTTPS base URL for that host.
-`project_link` uses the same convention.
+The final closure receives the hostname from the remote fetch URL after Git's
+`url.<base>.insteadOf` rules are applied. Returning `None` uses automatic forge
+detection and an HTTPS base URL for that host. `project_link` uses the same
+convention.
 
 Supply a [`ForgeTarget`](https://docs.rs/forgelink/latest/forgelink/struct.ForgeTarget.html)
 to override both the web destination and URL format:

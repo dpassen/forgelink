@@ -9,14 +9,14 @@ pub fn discover(path: &Path) -> Result<gix::Repository> {
 }
 
 pub fn remote(repo: &gix::Repository, remote_name: &str) -> Result<(String, String)> {
-    let config = repo.config_snapshot();
-    let url_bytes = config
-        .string_by("remote", Some(remote_name.into()), "url")
-        .ok_or_else(|| Error::NoRemote(remote_name.to_string()))?;
-    let raw = url_bytes
-        .to_str()
-        .map_err(|_| Error::InvalidRemoteUrl("remote url is not valid UTF-8".to_string()))?;
-    parse_remote_url(raw)
+    let remote = repo
+        .try_find_remote(remote_name)
+        .ok_or_else(|| Error::NoRemote(remote_name.to_string()))?
+        .map_err(|error| Error::InvalidRemoteUrl(error.to_string()))?;
+    let url = remote
+        .url(gix::remote::Direction::Fetch)
+        .ok_or_else(|| Error::InvalidRemoteUrl("missing fetch URL".to_string()))?;
+    remote_url_parts(url)
 }
 
 pub fn root(repo: &gix::Repository) -> Result<PathBuf> {
@@ -44,9 +44,7 @@ pub fn current_branch(repo: &gix::Repository) -> Result<GitRef> {
     Ok(GitRef::Branch(branch))
 }
 
-fn parse_remote_url(raw: &str) -> Result<(String, String)> {
-    let url = gix::url::parse(raw).map_err(|e| Error::InvalidRemoteUrl(e.to_string()))?;
-
+fn remote_url_parts(url: &gix::Url) -> Result<(String, String)> {
     let host = url
         .host()
         .ok_or_else(|| Error::InvalidRemoteUrl("missing host".to_string()))?;
