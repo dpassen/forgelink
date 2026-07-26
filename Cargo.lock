@@ -369,7 +369,7 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "forgelink"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "dunce",
  "gix",
@@ -381,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "forgelink-cli"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "arboard",
