@@ -63,7 +63,7 @@ pub enum RefSpec {
     Branch,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Lines {
     #[non_exhaustive]
     Single(NonZero<u32>),

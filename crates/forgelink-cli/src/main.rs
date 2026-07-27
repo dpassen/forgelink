@@ -1,13 +1,15 @@
 mod config;
 
+use std::fmt;
 use std::num::NonZero;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use clap::{Args as ClapArgs, Parser, Subcommand};
 use config::Config;
 use forgelink::{Lines, RefSpec};
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 #[command(
     name = "forgelink",
     version,
@@ -47,7 +49,7 @@ enum Command {
 #[derive(Debug, PartialEq, ClapArgs)]
 struct FileArgs {
     /// File path, optionally with line number(s): src/main.rs, src/main.rs:42, src/main.rs:42-55
-    file: String,
+    file: FileSpec,
 
     /// Use the current branch name instead of the commit SHA
     #[arg(long)]
@@ -58,25 +60,54 @@ struct FileArgs {
     remote: String,
 }
 
-fn parse_file_arg(raw: &str) -> anyhow::Result<(&str, Option<Lines>)> {
-    if let Some(colon) = raw.rfind(':')
-        && let Some(lines) = parse_line_spec(&raw[colon + 1..])?
-    {
-        return Ok((&raw[..colon], Some(lines)));
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FileSpec {
+    path: String,
+    lines: Option<Lines>,
+}
+
+#[derive(Debug)]
+struct FileSpecError(String);
+
+impl fmt::Display for FileSpecError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
-    Ok((raw, None))
+}
+
+impl std::error::Error for FileSpecError {}
+
+impl FromStr for FileSpec {
+    type Err = FileSpecError;
+
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        if let Some(colon) = raw.rfind(':')
+            && let Some(lines) = parse_line_spec(&raw[colon + 1..])?
+        {
+            return Ok(Self {
+                path: raw[..colon].into(),
+                lines: Some(lines),
+            });
+        }
+        Ok(Self {
+            path: raw.into(),
+            lines: None,
+        })
+    }
 }
 
 fn is_digits(s: &str) -> bool {
     !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit())
 }
 
-fn parse_line_spec(spec: &str) -> anyhow::Result<Option<Lines>> {
+fn parse_line_spec(spec: &str) -> Result<Option<Lines>, FileSpecError> {
     if let Some((start, end)) = spec.split_once('-')
         && is_digits(start)
         && is_digits(end)
     {
-        Ok(Some(Lines::range(parse_line(start)?, parse_line(end)?)?))
+        Lines::range(parse_line(start)?, parse_line(end)?)
+            .map(Some)
+            .map_err(|error| FileSpecError(error.to_string()))
     } else if is_digits(spec) {
         Ok(Some(Lines::single(parse_line(spec)?)))
     } else {
@@ -84,9 +115,13 @@ fn parse_line_spec(spec: &str) -> anyhow::Result<Option<Lines>> {
     }
 }
 
-fn parse_line(s: &str) -> anyhow::Result<NonZero<u32>> {
-    s.parse()
-        .map_err(|_| anyhow::anyhow!("invalid line number '{s}': line numbers start at 1"))
+fn parse_line(s: &str) -> Result<NonZero<u32>, FileSpecError> {
+    s.parse().map_err(|_| {
+        FileSpecError(format!(
+            "invalid line number '{s}': expected an integer from 1 to {}",
+            u32::MAX
+        ))
+    })
 }
 
 fn main() -> anyhow::Result<()> {
@@ -119,15 +154,19 @@ fn build_url(
     file_args: &FileArgs,
     config: &Config,
 ) -> anyhow::Result<String> {
-    let (file, lines) = parse_file_arg(&file_args.file)?;
     let git_ref = if file_args.branch {
         RefSpec::Branch
     } else {
         RefSpec::Commit
     };
-    forgelink::build_link(cwd, &file_args.remote, file, lines, git_ref, |host| {
-        config.target_for(host)
-    })
+    forgelink::build_link(
+        cwd,
+        &file_args.remote,
+        &file_args.file.path,
+        file_args.file.lines.clone(),
+        git_ref,
+        |host| config.target_for(host),
+    )
     .map_err(Into::into)
 }
 
