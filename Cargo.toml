@@ -8,6 +8,8 @@ rust-version = "1.88"
 [workspace.lints.clippy]
 format_push_string = "warn"
 missing_errors_doc = "warn"
+perf = "warn"
+redundant_clone = "warn"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
