@@ -1,5 +1,6 @@
 mod forge;
 mod remote;
+mod repo_file;
 mod target;
 
 pub use forge::Forge;
@@ -120,11 +121,21 @@ pub fn detect_forge(host: &str) -> Option<Forge> {
     forge::detect(host)
 }
 
-fn detected_target(host: String) -> Result<ForgeTarget> {
-    let Some(forge) = detect_forge(&host) else {
-        return Err(Error::UnknownForge(host));
+fn detected_target(host: &str) -> Result<ForgeTarget> {
+    let Some(forge) = detect_forge(host) else {
+        return Err(Error::UnknownForge(host.to_string()));
     };
     ForgeTarget::new(&format!("https://{host}"), forge)
+}
+
+fn resolve_target(
+    host: &str,
+    target_for_host: impl FnOnce(&str) -> Option<ForgeTarget>,
+) -> Result<ForgeTarget> {
+    let Some(target) = target_for_host(host) else {
+        return detected_target(host);
+    };
+    Ok(target)
 }
 
 /// Builds a URL for the repository project page.
@@ -144,10 +155,7 @@ pub fn project_link(
 ) -> Result<String> {
     let repo = remote::discover(path)?;
     let (host, dir) = remote::remote(&repo, remote_name)?;
-    let target = match target_for_host(&host) {
-        Some(target) => target,
-        None => detected_target(host)?,
-    };
+    let target = resolve_target(&host, target_for_host)?;
     Ok(target.project_url(&dir))
 }
 
@@ -171,57 +179,16 @@ pub fn build_link(
     git_ref: RefSpec,
     target_for_host: impl FnOnce(&str) -> Option<ForgeTarget>,
 ) -> Result<String> {
-    let file_path = dunce::simplified(Path::new(file));
-    let base = dunce::simplified(path);
-    let absolute = if file_path.is_absolute() {
-        file_path.to_path_buf()
-    } else {
-        base.join(file_path)
-    };
-    let discovery_path = if file_path.is_absolute() {
-        absolute.as_path()
-    } else {
-        base
-    };
-
-    let discovery_start = discovery_path
-        .ancestors()
-        .find(|p| p.is_dir())
-        .ok_or_else(|| {
-            Error::Io(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("{file}: no existing directory to search for a repository"),
-            ))
-        })?;
-    let repo = remote::discover(discovery_start)?;
-
-    let (host, dir) = remote::remote(&repo, remote_name)?;
-    let root = remote::root(&repo)?;
-    let resolved_parent = gix::path::realpath(absolute.parent().unwrap_or(&absolute))
-        .map_err(|e| Error::Io(std::io::Error::other(e)))?;
-    let resolved = match absolute.file_name() {
-        Some(file_name) => resolved_parent.join(file_name),
-        None => resolved_parent,
-    };
+    let file = repo_file::resolve(path, file)?;
+    let (host, dir) = remote::remote(&file.repo, remote_name)?;
     let git_ref = match git_ref {
-        RefSpec::Commit => remote::head_commit(&repo)?,
-        RefSpec::Branch => remote::current_branch(&repo)?,
+        RefSpec::Commit => remote::head_commit(&file.repo)?,
+        RefSpec::Branch => remote::current_branch(&file.repo)?,
     };
-
-    let relative = resolved
-        .strip_prefix(&root)
-        .map_err(|_| Error::FileOutsideRepository(file.to_string()))?
-        .to_str()
-        .ok_or(Error::NonUtf8Path)?
-        .replace(std::path::MAIN_SEPARATOR, "/");
-
-    let target = match target_for_host(&host) {
-        Some(target) => target,
-        None => detected_target(host)?,
-    };
+    let target = resolve_target(&host, target_for_host)?;
     let req = LinkRequest {
         dir,
-        file: relative,
+        file: file.path,
         git_ref,
         lines,
     };
