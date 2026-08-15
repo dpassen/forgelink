@@ -58,7 +58,11 @@ fn remote_url_parts(url: &gix::Url) -> Result<(String, String)> {
     let host = url
         .host()
         .ok_or_else(|| Error::InvalidRemoteUrl("missing host".to_string()))?;
-    let host = match url.port {
+    let web_port = match &url.scheme {
+        gix::url::Scheme::Http | gix::url::Scheme::Https => url.port,
+        _ => None,
+    };
+    let host = match web_port {
         Some(port) => format!("{host}:{port}"),
         None => host.to_string(),
     };

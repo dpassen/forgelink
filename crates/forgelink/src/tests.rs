@@ -298,6 +298,13 @@ fn project_link_end_to_end() {
 }
 
 #[test]
+fn project_link_does_not_reuse_ssh_port_for_https() {
+    let dir = init_repo("ssh://git@github.com:2222/user/repo.git");
+    let url = project_link(dir.path(), "origin", automatic_target).unwrap();
+    assert_eq!(url, "https://github.com/user/repo");
+}
+
+#[test]
 fn project_link_applies_git_url_rewrites() {
     let dir = init_repo("forgelink-test-gh:user/repo.git");
     let config = dir.path().join(".git").join("config");
