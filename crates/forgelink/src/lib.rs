@@ -113,6 +113,50 @@ pub struct LinkRequest {
     pub lines: Option<Lines>,
 }
 
+/// Information parsed from a Git remote's fetch URL.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RemoteInfo {
+    hostname: String,
+    port: Option<u16>,
+    scheme: gix::url::Scheme,
+    repository: String,
+}
+
+impl RemoteInfo {
+    /// Returns the remote hostname without its port.
+    #[must_use]
+    pub fn hostname(&self) -> &str {
+        &self.hostname
+    }
+
+    /// Returns the remote transport port, if specified.
+    #[must_use]
+    pub fn port(&self) -> Option<u16> {
+        self.port
+    }
+
+    /// Returns the normalized remote URL scheme.
+    #[must_use]
+    pub fn scheme(&self) -> &str {
+        self.scheme.as_str()
+    }
+
+    /// Returns the repository path without a leading slash or `.git` suffix.
+    #[must_use]
+    pub fn repository(&self) -> &str {
+        &self.repository
+    }
+
+    fn web_authority(&self) -> String {
+        match (&self.scheme, self.port) {
+            (gix::url::Scheme::Http | gix::url::Scheme::Https, Some(port)) => {
+                format!("{}:{port}", self.hostname)
+            }
+            _ => self.hostname.clone(),
+        }
+    }
+}
+
 /// Detects the forge for `host`.
 ///
 /// Returns `None` if the forge is unsupported.
@@ -121,49 +165,50 @@ pub fn detect_forge(host: &str) -> Option<Forge> {
     forge::detect(host)
 }
 
-fn detected_target(host: &str) -> Result<ForgeTarget> {
-    let Some(forge) = detect_forge(host) else {
-        return Err(Error::UnknownForge(host.to_string()));
+fn detected_target(remote: &RemoteInfo) -> Result<ForgeTarget> {
+    let Some(forge) = detect_forge(remote.hostname()) else {
+        return Err(Error::UnknownForge(remote.hostname().to_string()));
     };
-    ForgeTarget::new(&format!("https://{host}"), forge)
+    ForgeTarget::new(&format!("https://{}", remote.web_authority()), forge)
 }
 
 fn resolve_target(
-    host: &str,
-    target_for_host: impl FnOnce(&str) -> Option<ForgeTarget>,
+    remote: &RemoteInfo,
+    target_for_remote: impl FnOnce(&RemoteInfo) -> Option<ForgeTarget>,
 ) -> Result<ForgeTarget> {
-    let Some(target) = target_for_host(host) else {
-        return detected_target(host);
+    let Some(target) = target_for_remote(remote) else {
+        return detected_target(remote);
     };
     Ok(target)
 }
 
 /// Builds a URL for the repository project page.
 ///
-/// `target_for_host` receives the hostname from the remote fetch URL after Git
-/// URL rewrite rules are applied. If it returns `None`, the target is inferred
-/// from that host.
+/// `target_for_remote` receives information parsed from the remote fetch URL
+/// after Git URL rewrite rules are applied. If it returns `None`, the target is
+/// inferred from the remote hostname.
 ///
 /// # Errors
 ///
 /// Fails if `path` is not in a Git repository, the remote is missing or invalid,
-/// or neither `target_for_host` nor automatic detection supplies a target.
+/// or neither `target_for_remote` nor automatic detection supplies a target.
 pub fn project_link(
     path: &Path,
     remote_name: &str,
-    target_for_host: impl FnOnce(&str) -> Option<ForgeTarget>,
+    target_for_remote: impl FnOnce(&RemoteInfo) -> Option<ForgeTarget>,
 ) -> Result<String> {
     let repo = remote::discover(path)?;
-    let (host, dir) = remote::remote(&repo, remote_name)?;
-    let target = resolve_target(&host, target_for_host)?;
-    Ok(target.project_url(&dir))
+    let remote_info = remote::location(&repo, remote_name)?;
+    let target = resolve_target(&remote_info, target_for_remote)?;
+    Ok(target.project_url(&remote_info.repository))
 }
 
 /// Builds a URL for `file`, optionally with line anchors.
 ///
-/// Relative paths are resolved against `path`. `target_for_host` receives the
-/// hostname from the remote fetch URL after Git URL rewrite rules are applied.
-/// If it returns `None`, the target is inferred from that host.
+/// Relative paths are resolved against `path`. `target_for_remote` receives
+/// information parsed from the remote fetch URL after Git URL rewrite rules are
+/// applied. If it returns `None`, the target is inferred from the remote
+/// hostname.
 ///
 /// # Errors
 ///
@@ -177,17 +222,17 @@ pub fn build_link(
     file: &str,
     lines: Option<Lines>,
     git_ref: RefSpec,
-    target_for_host: impl FnOnce(&str) -> Option<ForgeTarget>,
+    target_for_remote: impl FnOnce(&RemoteInfo) -> Option<ForgeTarget>,
 ) -> Result<String> {
     let file = repo_file::resolve(path, file)?;
-    let (host, dir) = remote::remote(&file.repo, remote_name)?;
+    let remote_info = remote::location(&file.repo, remote_name)?;
     let git_ref = match git_ref {
         RefSpec::Commit => remote::head_commit(&file.repo)?,
         RefSpec::Branch => remote::current_branch(&file.repo)?,
     };
-    let target = resolve_target(&host, target_for_host)?;
+    let target = resolve_target(&remote_info, target_for_remote)?;
     let req = LinkRequest {
-        dir,
+        dir: remote_info.repository,
         file: file.path,
         git_ref,
         lines,

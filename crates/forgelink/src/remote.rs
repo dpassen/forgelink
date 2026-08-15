@@ -2,13 +2,13 @@ use std::path::{Path, PathBuf};
 
 use gix::{bstr::ByteSlice, remote::find};
 
-use crate::{Error, GitRef, Result};
+use crate::{Error, GitRef, RemoteInfo, Result};
 
 pub fn discover(path: &Path) -> Result<gix::Repository> {
     gix::discover(path).map_err(|e| Error::RepositoryNotFound(Box::new(e)))
 }
 
-pub fn remote(repo: &gix::Repository, remote_name: &str) -> Result<(String, String)> {
+pub fn location(repo: &gix::Repository, remote_name: &str) -> Result<RemoteInfo> {
     let remote = repo
         .try_find_remote(remote_name)
         .ok_or_else(|| Error::NoRemote(remote_name.to_string()))?
@@ -26,7 +26,7 @@ pub fn remote(repo: &gix::Repository, remote_name: &str) -> Result<(String, Stri
     let url = remote
         .url(gix::remote::Direction::Fetch)
         .ok_or_else(|| Error::InvalidRemoteUrl("missing fetch URL".to_string()))?;
-    remote_url_parts(url)
+    location_from_url(url)
 }
 
 pub fn root(repo: &gix::Repository) -> Result<PathBuf> {
@@ -54,24 +54,25 @@ pub fn current_branch(repo: &gix::Repository) -> Result<GitRef> {
     Ok(GitRef::Branch(branch))
 }
 
-fn remote_url_parts(url: &gix::Url) -> Result<(String, String)> {
-    let host = url
+fn location_from_url(url: &gix::Url) -> Result<RemoteInfo> {
+    let hostname = url
         .host()
-        .ok_or_else(|| Error::InvalidRemoteUrl("missing host".to_string()))?;
-    let web_port = match &url.scheme {
-        gix::url::Scheme::Http | gix::url::Scheme::Https => url.port,
-        _ => None,
-    };
-    let host = match web_port {
-        Some(port) => format!("{host}:{port}"),
-        None => host.to_string(),
-    };
+        .ok_or_else(|| Error::InvalidRemoteUrl("missing host".to_string()))?
+        .to_string();
 
     let raw_path = url.path.to_str_lossy();
-    let dir = raw_path.trim_start_matches('/');
-    let dir = dir.strip_suffix(".git").unwrap_or(dir).to_string();
+    let repository = raw_path.trim_start_matches('/');
+    let repository = repository
+        .strip_suffix(".git")
+        .unwrap_or(repository)
+        .to_string();
 
-    Ok((host, dir))
+    Ok(RemoteInfo {
+        hostname,
+        port: url.port,
+        scheme: url.scheme.clone(),
+        repository,
+    })
 }
 
 #[cfg(test)]
