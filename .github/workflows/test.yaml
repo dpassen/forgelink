@@ -16,4 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --locked
+      - name: Test all features
+        run: cargo test --workspace --all-features --locked
+      - name: Test default features
+        run: cargo test --workspace --locked
+      - name: Test without default features
+        run: cargo test --workspace --no-default-features --locked

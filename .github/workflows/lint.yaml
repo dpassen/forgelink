@@ -14,7 +14,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Clippy with all features
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Clippy without default features
+        run: cargo clippy --workspace --all-targets --no-default-features --locked -- -D warnings
 
   rumdl:
     runs-on: ubuntu-latest
