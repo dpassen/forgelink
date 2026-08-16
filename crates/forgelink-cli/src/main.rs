@@ -165,7 +165,7 @@ fn build_url(
         &file_args.file.path,
         file_args.file.lines.clone(),
         git_ref,
-        |host| config.target_for(host),
+        |remote| config.target_for(remote.hostname()),
     )
     .map_err(Into::into)
 }

@@ -25,7 +25,7 @@ fn commit_empty(dir: &Path) {
         .unwrap();
 }
 
-fn automatic_target(_: &str) -> Option<ForgeTarget> {
+fn automatic_target(_: &RemoteInfo) -> Option<ForgeTarget> {
     None
 }
 
@@ -370,7 +370,12 @@ fn project_link_reports_invalid_rewritten_remote_url() {
 fn build_link_accepts_target_for_ssh_alias() {
     let dir = init_repo("git@gh-work:user/repo.git");
     commit_empty(dir.path());
-    let expected_host = "gh-work".to_string();
+    let expected = RemoteInfo {
+        hostname: "gh-work".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "user/repo".to_string(),
+    };
 
     let url = build_link(
         dir.path(),
@@ -378,9 +383,9 @@ fn build_link_accepts_target_for_ssh_alias() {
         "src/main.rs",
         None,
         RefSpec::Commit,
-        move |host| {
-            assert_eq!(host, expected_host);
-            drop(expected_host);
+        move |actual| {
+            assert_eq!(&expected, actual);
+            drop(expected);
             Some(ForgeTarget::new("https://github.com", Forge::GitHub).unwrap())
         },
     )
@@ -397,8 +402,8 @@ fn build_link_accepts_target_for_ssh_alias() {
 fn project_link_accepts_enterprise_target() {
     let dir = init_repo("git@git.company.tld:group/repo.git");
 
-    let url = project_link(dir.path(), "origin", |host| {
-        assert_eq!(host, "git.company.tld");
+    let url = project_link(dir.path(), "origin", |remote| {
+        assert_eq!(remote.hostname(), "git.company.tld");
         Some(ForgeTarget::new("https://company.tld/services/gitlab", Forge::GitLab).unwrap())
     })
     .unwrap();
