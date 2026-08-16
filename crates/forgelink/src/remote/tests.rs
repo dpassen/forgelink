@@ -31,6 +31,52 @@ fn https_url_without_dot_git() {
 }
 
 #[test]
+fn rejects_missing_repository_path() {
+    let url = gix::url::parse("https://github.com").unwrap();
+    let error = location_from_url(&url).unwrap_err();
+    assert!(matches!(
+        error,
+        Error::InvalidRemoteUrl(message) if message == "missing repository path"
+    ));
+}
+
+#[test]
+fn rejects_root_repository_path() {
+    let url = gix::url::parse("https://github.com/").unwrap();
+    let error = location_from_url(&url).unwrap_err();
+    assert!(matches!(
+        error,
+        Error::InvalidRemoteUrl(message) if message == "missing repository path"
+    ));
+}
+
+#[test]
+fn rejects_missing_repository_name() {
+    let url = gix::url::parse("https://github.com/owner/.git").unwrap();
+    let error = location_from_url(&url).unwrap_err();
+    assert!(matches!(
+        error,
+        Error::InvalidRemoteUrl(message) if message == "missing repository path"
+    ));
+}
+
+#[test]
+fn normalizes_trailing_slash() {
+    let expected = remote_info("github.com", None, gix::url::Scheme::Https, "owner/repo");
+    let url = gix::url::parse("https://github.com/owner/repo.git/").unwrap();
+    let actual = location_from_url(&url).unwrap();
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn normalizes_repeated_slashes() {
+    let expected = remote_info("github.com", None, gix::url::Scheme::Https, "owner/repo");
+    let url = gix::url::parse("https://github.com/owner///repo.git").unwrap();
+    let actual = location_from_url(&url).unwrap();
+    assert_eq!(expected, actual);
+}
+
+#[test]
 fn scp_like_ssh_url() {
     let expected = remote_info("github.com", None, gix::url::Scheme::Ssh, "user/repo");
     let url = gix::url::parse("git@github.com:user/repo.git").unwrap();

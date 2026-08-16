@@ -54,18 +54,30 @@ pub fn current_branch(repo: &gix::Repository) -> Result<GitRef> {
     Ok(GitRef::Branch(branch))
 }
 
+fn repository_path(raw_path: &str) -> Result<String> {
+    let mut segments: Vec<_> = raw_path
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    let repository_name = segments.pop().unwrap_or_default();
+    let repository_name = repository_name
+        .strip_suffix(".git")
+        .unwrap_or(repository_name);
+    if repository_name.is_empty() {
+        return Err(Error::InvalidRemoteUrl(
+            "missing repository path".to_string(),
+        ));
+    }
+    segments.push(repository_name);
+    Ok(segments.join("/"))
+}
+
 fn location_from_url(url: &gix::Url) -> Result<RemoteInfo> {
     let hostname = url
         .host()
         .ok_or_else(|| Error::InvalidRemoteUrl("missing host".to_string()))?
         .to_string();
-
-    let raw_path = url.path.to_str_lossy();
-    let repository = raw_path.trim_start_matches('/');
-    let repository = repository
-        .strip_suffix(".git")
-        .unwrap_or(repository)
-        .to_string();
+    let repository = repository_path(&url.path.to_str_lossy())?;
 
     Ok(RemoteInfo {
         hostname,
