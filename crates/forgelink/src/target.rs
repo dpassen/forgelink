@@ -1,6 +1,11 @@
-use url::Url;
+use url::{PathSegmentsMut, Url};
 
 use crate::{Error, Forge, LinkRequest, Result};
+
+fn path_segments_mut(url: &mut Url) -> Result<PathSegmentsMut<'_>> {
+    url.path_segments_mut()
+        .map_err(|()| Error::InvalidBaseUrl("cannot be used as a base".to_string()))
+}
 
 /// A validated web destination and URL format for a forge.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,10 +51,7 @@ impl ForgeTarget {
             ));
         }
 
-        base_url
-            .path_segments_mut()
-            .expect("an HTTP(S) URL can be a base")
-            .pop_if_empty();
+        path_segments_mut(&mut base_url)?.pop_if_empty();
 
         Ok(Self { base_url, forge })
     }
@@ -67,24 +69,29 @@ impl ForgeTarget {
     }
 
     /// Builds a URL for a file and optional line range.
-    #[must_use]
-    pub fn file_url(&self, req: &LinkRequest) -> String {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the target URL does not support hierarchical path segments.
+    pub fn file_url(&self, req: &LinkRequest) -> Result<String> {
         self.forge.file_url(self, req)
     }
 
     /// Builds a URL for a repository project page.
-    #[must_use]
-    pub fn project_url(&self, dir: &str) -> String {
-        self.with_path(dir).into()
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the target URL does not support hierarchical path segments.
+    pub fn project_url(&self, dir: &str) -> Result<String> {
+        self.with_path(dir).map(Into::into)
     }
 
-    pub(crate) fn with_path(&self, path: &str) -> Url {
+    pub(crate) fn with_path(&self, path: &str) -> Result<Url> {
         let mut url = self.base_url.clone();
-        url.path_segments_mut()
-            .expect("an HTTP(S) URL can be a base")
+        path_segments_mut(&mut url)?
             .pop_if_empty()
             .extend(path.split('/'));
-        url
+        Ok(url)
     }
 }
 

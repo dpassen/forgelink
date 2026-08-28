@@ -200,7 +200,7 @@ pub fn project_link(
     let repo = remote::discover(path)?;
     let remote_info = remote::location(&repo, remote_name)?;
     let target = resolve_target(&remote_info, target_for_remote)?;
-    Ok(target.project_url(&remote_info.repository))
+    target.project_url(&remote_info.repository)
 }
 
 /// Builds a URL for `file`, optionally with line anchors.
@@ -237,7 +237,7 @@ pub fn build_link(
         git_ref,
         lines,
     };
-    Ok(target.file_url(&req))
+    target.file_url(&req)
 }
 
 #[cfg(test)]

@@ -34,12 +34,38 @@ fn renders_against_base_url_with_path_prefix() {
     };
 
     assert_eq!(
-        target.file_url(&request),
+        target.file_url(&request).unwrap(),
         "https://company.example/services/gitlab/group/repo/-/blob/abc123/src/main.rs"
     );
     assert_eq!(
-        target.project_url("group/repo"),
+        target.project_url("group/repo").unwrap(),
         "https://company.example/services/gitlab/group/repo"
+    );
+}
+
+#[test]
+fn rendering_non_base_url_returns_errors() {
+    let target = ForgeTarget {
+        base_url: Url::parse("mailto:user@example.com").unwrap(),
+        forge: Forge::GitHub,
+    };
+    let request = LinkRequest {
+        dir: "group/repo".into(),
+        file: "src/main.rs".into(),
+        git_ref: crate::GitRef::Commit("abc123".into()),
+        lines: None,
+    };
+
+    let project_error = target.project_url("group/repo").unwrap_err();
+    assert_eq!(
+        project_error.to_string(),
+        "invalid base URL: cannot be used as a base"
+    );
+
+    let file_error = target.file_url(&request).unwrap_err();
+    assert_eq!(
+        file_error.to_string(),
+        "invalid base URL: cannot be used as a base"
     );
 }
 

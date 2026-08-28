@@ -1,4 +1,4 @@
-use crate::{ForgeTarget, GitRef, Lines, LinkRequest};
+use crate::{ForgeTarget, GitRef, Lines, LinkRequest, Result};
 
 /// Looks for an exact match against a known forge host.
 ///
@@ -54,7 +54,7 @@ pub enum Forge {
 }
 
 impl Forge {
-    pub(crate) fn file_url(self, target: &ForgeTarget, req: &LinkRequest) -> String {
+    pub(crate) fn file_url(self, target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
         match self {
             Forge::GitHub => github(target, req),
             Forge::GitLab => gitlab(target, req),
@@ -72,12 +72,13 @@ fn git_ref_str(git_ref: &GitRef) -> &str {
     }
 }
 
-fn finish(mut url: url::Url, fragment: Option<String>) -> String {
+fn finish(target: &ForgeTarget, path: &str, fragment: Option<String>) -> Result<String> {
+    let mut url = target.with_path(path)?;
     url.set_fragment(fragment.as_deref());
-    url.into()
+    Ok(url.into())
 }
 
-fn github(target: &ForgeTarget, req: &LinkRequest) -> String {
+fn github(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
     let path = format!(
         "{}/blob/{}/{}",
         req.dir,
@@ -88,10 +89,10 @@ fn github(target: &ForgeTarget, req: &LinkRequest) -> String {
         Lines::Single(line) => format!("L{line}"),
         Lines::Range(start, end) => format!("L{start}-L{end}"),
     });
-    finish(target.with_path(&path), fragment)
+    finish(target, &path, fragment)
 }
 
-fn gitlab(target: &ForgeTarget, req: &LinkRequest) -> String {
+fn gitlab(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
     let path = format!(
         "{}/-/blob/{}/{}",
         req.dir,
@@ -102,10 +103,10 @@ fn gitlab(target: &ForgeTarget, req: &LinkRequest) -> String {
         Lines::Single(line) => format!("L{line}"),
         Lines::Range(start, end) => format!("L{start}-{end}"),
     });
-    finish(target.with_path(&path), fragment)
+    finish(target, &path, fragment)
 }
 
-fn sourcehut(target: &ForgeTarget, req: &LinkRequest) -> String {
+fn sourcehut(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
     let path = format!(
         "{}/tree/{}/{}",
         req.dir,
@@ -116,10 +117,10 @@ fn sourcehut(target: &ForgeTarget, req: &LinkRequest) -> String {
         Lines::Single(line) => format!("L{line}"),
         Lines::Range(start, end) => format!("L{start}-{end}"),
     });
-    finish(target.with_path(&path), fragment)
+    finish(target, &path, fragment)
 }
 
-fn bitbucket(target: &ForgeTarget, req: &LinkRequest) -> String {
+fn bitbucket(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
     let path = format!("{}/src/{}/{}", req.dir, git_ref_str(&req.git_ref), req.file);
     let basename = req.file.rsplit('/').next().unwrap_or(&req.file);
     let basename = urlencoding::encode(basename);
@@ -127,10 +128,10 @@ fn bitbucket(target: &ForgeTarget, req: &LinkRequest) -> String {
         Lines::Single(line) => format!("{basename}-{line}"),
         Lines::Range(start, end) => format!("{basename}-{start}:{end}"),
     });
-    finish(target.with_path(&path), fragment)
+    finish(target, &path, fragment)
 }
 
-fn codeberg(target: &ForgeTarget, req: &LinkRequest) -> String {
+fn codeberg(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
     let path = match &req.git_ref {
         GitRef::Branch(branch) => format!("{}/src/{branch}/{}", req.dir, req.file),
         GitRef::Commit(commit) => format!("{}/src/commit/{commit}/{}", req.dir, req.file),
@@ -139,7 +140,7 @@ fn codeberg(target: &ForgeTarget, req: &LinkRequest) -> String {
         Lines::Single(line) => format!("L{line}"),
         Lines::Range(start, end) => format!("L{start}-L{end}"),
     });
-    finish(target.with_path(&path), fragment)
+    finish(target, &path, fragment)
 }
 
 #[cfg(test)]
