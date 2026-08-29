@@ -1,6 +1,6 @@
 [package]
 name = "forgelink-cli"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2024"
 rust-version.workspace = true
 license = "MIT OR Apache-2.0"
@@ -24,7 +24,7 @@ redundant_clone = "warn"
 unsafe_code = "forbid"
 
 [dependencies]
-forgelink = { path = "../forgelink", version = "0.6.1" }
+forgelink = { path = "../forgelink", version = "0.7.0" }
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 directories = "6"
