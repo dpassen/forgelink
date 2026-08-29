@@ -91,7 +91,7 @@ fn github_commit_no_lines() {
     let forge = target("github.com");
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://github.com/user/repo/blob/abc123/src/main.rs"
     );
 }
@@ -102,7 +102,7 @@ fn github_commit_single_line() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(42)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://github.com/user/repo/blob/abc123/src/main.rs#L42"
     );
 }
@@ -113,7 +113,7 @@ fn github_commit_line_range() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(42), nz(55)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://github.com/user/repo/blob/abc123/src/main.rs#L42-L55"
     );
 }
@@ -123,7 +123,7 @@ fn github_encodes_special_chars() {
     let forge = target("github.com");
     let request = req("user/repo", "src/my file.rs", commit("abc123"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://github.com/user/repo/blob/abc123/src/my%20file.rs"
     );
 }
@@ -135,7 +135,7 @@ fn gitlab_commit_no_lines() {
     let forge = target("gitlab.com");
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://gitlab.com/user/repo/-/blob/abc123/src/main.rs"
     );
 }
@@ -146,7 +146,7 @@ fn gitlab_commit_line_range() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(10), nz(20)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://gitlab.com/user/repo/-/blob/abc123/src/main.rs#L10-20"
     );
 }
@@ -158,7 +158,7 @@ fn sourcehut_commit_no_lines() {
     let forge = target("git.sr.ht");
     let request = req("~user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://git.sr.ht/~user/repo/tree/abc123/src/main.rs"
     );
 }
@@ -169,7 +169,7 @@ fn sourcehut_commit_line_range() {
     let mut request = req("~user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(5), nz(15)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://git.sr.ht/~user/repo/tree/abc123/src/main.rs#L5-15"
     );
 }
@@ -181,7 +181,7 @@ fn bitbucket_commit_no_lines() {
     let forge = target("bitbucket.org");
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://bitbucket.org/user/repo/src/abc123/src/main.rs"
     );
 }
@@ -192,7 +192,7 @@ fn bitbucket_commit_line_range() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(10), nz(20)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://bitbucket.org/user/repo/src/abc123/src/main.rs#main.rs-10:20"
     );
 }
@@ -203,7 +203,7 @@ fn bitbucket_encodes_special_chars_in_line_anchor() {
     let mut request = req("user/repo", "src/a:b?#%.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://bitbucket.org/user/repo/src/abc123/src/a:b%3F%23%25.rs#a%3Ab%3F%23%25.rs-7"
     );
 }
@@ -213,7 +213,7 @@ fn bitbucket_branch_no_lines() {
     let forge = target("bitbucket.org");
     let request = req("user/repo", "src/main.rs", branch("main"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://bitbucket.org/user/repo/src/main/src/main.rs"
     );
 }
@@ -225,7 +225,7 @@ fn codeberg_branch_no_lines() {
     let forge = target("codeberg.org");
     let request = req("user/repo", "src/main.rs", branch("main"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://codeberg.org/user/repo/src/main/src/main.rs"
     );
 }
@@ -235,7 +235,7 @@ fn codeberg_commit_prefixes_path() {
     let forge = target("codeberg.org");
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://codeberg.org/user/repo/src/commit/abc123/src/main.rs"
     );
 }
@@ -246,7 +246,7 @@ fn codeberg_commit_line_range() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(1), nz(10)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://codeberg.org/user/repo/src/commit/abc123/src/main.rs#L1-L10"
     );
 }
@@ -257,7 +257,7 @@ fn gitlab_single_line() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://gitlab.com/user/repo/-/blob/abc123/src/main.rs#L7"
     );
 }
@@ -268,7 +268,7 @@ fn sourcehut_single_line() {
     let mut request = req("~user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://git.sr.ht/~user/repo/tree/abc123/src/main.rs#L7"
     );
 }
@@ -279,7 +279,7 @@ fn bitbucket_single_line() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://bitbucket.org/user/repo/src/abc123/src/main.rs#main.rs-7"
     );
 }
@@ -290,7 +290,7 @@ fn codeberg_single_line() {
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://codeberg.org/user/repo/src/commit/abc123/src/main.rs#L7"
     );
 }
@@ -300,7 +300,7 @@ fn branch_with_slash_keeps_slash() {
     let forge = target("github.com");
     let request = req("user/repo", "src/main.rs", branch("feature/x"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://github.com/user/repo/blob/feature/x/src/main.rs"
     );
 }
@@ -316,7 +316,7 @@ fn detects_with_port_in_host() {
 fn project_url_github() {
     let forge = target("github.com");
     assert_eq!(
-        forge.project_url("user/repo"),
+        forge.project_url("user/repo").unwrap(),
         "https://github.com/user/repo"
     );
 }
@@ -332,7 +332,7 @@ fn project_url_all_forges_same_format() {
     ] {
         let forge = target(host);
         assert_eq!(
-            forge.project_url("user/repo"),
+            forge.project_url("user/repo").unwrap(),
             format!("https://{host}/user/repo")
         );
     }
@@ -343,7 +343,7 @@ fn fedora_forge_uses_codeberg_format() {
     let forge = target("forge.fedoraproject.org");
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
-        forge.file_url(&request),
+        forge.file_url(&request).unwrap(),
         "https://forge.fedoraproject.org/user/repo/src/commit/abc123/src/main.rs"
     );
 }

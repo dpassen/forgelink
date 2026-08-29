@@ -14,8 +14,14 @@ categories = ["command-line-utilities", "development-tools"]
 name = "forgelink"
 path = "src/main.rs"
 
-[lints]
-workspace = true
+[lints.clippy]
+format_push_string = "warn"
+missing_errors_doc = "warn"
+perf = "warn"
+redundant_clone = "warn"
+
+[lints.rust]
+unsafe_code = "forbid"
 
 [dependencies]
 forgelink = { path = "../forgelink", version = "0.6.1" }

@@ -10,8 +10,18 @@ repository = "https://github.com/dpassen/forgelink"
 keywords = ["git", "forge", "url", "github", "gitlab"]
 categories = ["development-tools"]
 
-[lints]
-workspace = true
+[lints.clippy]
+expect_used = "deny"
+format_push_string = "warn"
+indexing_slicing = "deny"
+missing_errors_doc = "warn"
+panic = "deny"
+perf = { level = "warn", priority = -1 }
+redundant_clone = "warn"
+unwrap_used = "deny"
+
+[lints.rust]
+unsafe_code = "forbid"
 
 [dependencies]
 dunce = "1"
