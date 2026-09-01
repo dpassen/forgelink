@@ -1,3 +1,5 @@
+use iri_string::percent_encode::PercentEncodedForUri;
+
 use crate::{ForgeTarget, GitRef, Lines, LinkRequest, Result};
 
 /// Looks for an exact match against a known forge host.
@@ -123,7 +125,7 @@ fn sourcehut(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
 fn bitbucket(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
     let path = format!("{}/src/{}/{}", req.dir, git_ref_str(&req.git_ref), req.file);
     let basename = req.file.rsplit('/').next().unwrap_or(&req.file);
-    let basename = urlencoding::encode(basename);
+    let basename = PercentEncodedForUri::unreserve(basename);
     let fragment = req.lines.as_ref().map(|lines| match lines {
         Lines::Single(line) => format!("{basename}-{line}"),
         Lines::Range(start, end) => format!("{basename}-{start}:{end}"),

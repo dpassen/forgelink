@@ -128,6 +128,23 @@ fn github_encodes_special_chars() {
     );
 }
 
+#[test]
+fn github_encodes_rfc3986_path_characters() {
+    let forge = target("github.com");
+    let request = req(
+        "user/repo",
+        "app/[slug]/:@!$&'()*+,;=-._~ café?#%.tsx",
+        commit("abc123"),
+    );
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://github.com/user/repo/blob/abc123/app/%5Bslug%5D/",
+            ":@!$&'()*+,;=-._~%20caf%C3%A9%3F%23%25.tsx"
+        )
+    );
+}
+
 // --- gitlab ---
 
 #[test]
