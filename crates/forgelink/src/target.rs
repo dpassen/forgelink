@@ -1,3 +1,4 @@
+use iri_string::percent_encode::PercentEncodedForUri;
 use url::{PathSegmentsMut, Url};
 
 use crate::{Error, Forge, LinkRequest, Result};
@@ -88,9 +89,15 @@ impl ForgeTarget {
 
     pub(crate) fn with_path(&self, path: &str) -> Result<Url> {
         let mut url = self.base_url.clone();
-        path_segments_mut(&mut url)?
-            .pop_if_empty()
-            .extend(path.split('/'));
+        path_segments_mut(&mut url)?.pop_if_empty();
+
+        let path = format!(
+            "{}/{}",
+            url.path().trim_end_matches('/'),
+            PercentEncodedForUri::from_path(path)
+        );
+        url.set_path(&path);
+
         Ok(url)
     }
 }
