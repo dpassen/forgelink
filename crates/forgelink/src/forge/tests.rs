@@ -41,6 +41,13 @@ fn detects_gitlab() {
 }
 
 #[test]
+fn detects_tangled() {
+    assert_eq!(detect("tangled.org"), Some(Forge::Tangled));
+    assert_eq!(detect("TANGLED.ORG"), Some(Forge::Tangled));
+    assert!(detect("subdomain.tangled.org").is_none());
+}
+
+#[test]
 fn detects_sourcehut() {
     assert!(detect("git.sr.ht").is_some());
     assert!(detect("sr.ht").is_none());
@@ -165,6 +172,40 @@ fn gitlab_commit_line_range() {
     assert_eq!(
         forge.file_url(&request).unwrap(),
         "https://gitlab.com/user/repo/-/blob/abc123/src/main.rs#L10-20"
+    );
+}
+
+// --- tangled ---
+
+#[test]
+fn tangled_commit_no_lines() {
+    let forge = target("tangled.org");
+    let request = req("user/repo", "src/main.rs", commit("abc123"));
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        "https://tangled.org/user/repo/blob/abc123/src/main.rs"
+    );
+}
+
+#[test]
+fn tangled_commit_single_line() {
+    let forge = target("tangled.org");
+    let mut request = req("user/repo", "src/main.rs", commit("abc123"));
+    request.lines = Some(Lines::Single(nz(42)));
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        "https://tangled.org/user/repo/blob/abc123/src/main.rs#L42"
+    );
+}
+
+#[test]
+fn tangled_commit_line_range() {
+    let forge = target("tangled.org");
+    let mut request = req("user/repo", "src/main.rs", commit("abc123"));
+    request.lines = Some(Lines::Range(nz(42), nz(55)));
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        "https://tangled.org/user/repo/blob/abc123/src/main.rs#L42-55"
     );
 }
 
@@ -346,6 +387,7 @@ fn project_url_all_forges_same_format() {
         "git.sr.ht",
         "bitbucket.org",
         "codeberg.org",
+        "tangled.org",
     ] {
         let forge = target(host);
         assert_eq!(

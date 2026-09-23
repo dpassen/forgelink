@@ -112,6 +112,7 @@ fn parse_forge(value: &str) -> anyhow::Result<Forge> {
         "sourcehut" => Ok(Forge::SourceHut),
         "bitbucket" => Ok(Forge::Bitbucket),
         "codeberg" => Ok(Forge::Codeberg),
+        "tangled" => Ok(Forge::Tangled),
         _ => Err(anyhow!("unsupported forge '{value}'")),
     }
 }

@@ -19,6 +19,7 @@ Inspired by the Emacs package [git-link](https://github.com/sshaw/git-link).
 - [SourceHut](https://sourcehut.org)
 - [Bitbucket](https://bitbucket.org)
 - [Codeberg](https://codeberg.org) (including [forge.fedoraproject.org](https://forge.fedoraproject.org))
+- [Tangled](https://tangled.org)
 
 ## Installation
 
@@ -126,7 +127,8 @@ Host entries require all three fields:
 - `host` is the hostname after Git URL rewrites are applied.
 - `base-url` is the HTTP or HTTPS URL used to build links. It may include a
   custom port or path prefix, but not credentials, a query, or a fragment.
-- `forge` is one of `github`, `gitlab`, `sourcehut`, `bitbucket`, or `codeberg`.
+- `forge` is one of `github`, `gitlab`, `sourcehut`, `bitbucket`, `codeberg`, or
+  `tangled`.
 
 Host matching is exact and case-insensitive. A matching entry skips automatic
 forge detection. Wildcards and chained mappings are not supported.

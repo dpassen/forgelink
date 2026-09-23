@@ -34,6 +34,7 @@ fn parses_every_supported_forge() {
         ("sourcehut", Forge::SourceHut),
         ("bitbucket", Forge::Bitbucket),
         ("codeberg", Forge::Codeberg),
+        ("tangled", Forge::Tangled),
     ] {
         let config = Config::parse(&format!(
             r#"
