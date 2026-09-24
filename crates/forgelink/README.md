@@ -15,6 +15,7 @@ This is the library crate behind the [`forgelink`](https://crates.io/crates/forg
 - SourceHut
 - Bitbucket
 - Codeberg (including forge.fedoraproject.org)
+- Tangled
 
 ## Usage
 

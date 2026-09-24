@@ -10,6 +10,7 @@ fn detect_by_known_host(host: &str) -> Option<Forge> {
         ("git.sr.ht", Forge::SourceHut),
         ("codeberg.org", Forge::Codeberg),
         ("forge.fedoraproject.org", Forge::Codeberg),
+        ("tangled.org", Forge::Tangled),
     ]
     .into_iter()
     .find_map(|(known, forge)| host.eq_ignore_ascii_case(known).then_some(forge))
@@ -53,6 +54,7 @@ pub enum Forge {
     SourceHut,
     Bitbucket,
     Codeberg,
+    Tangled,
 }
 
 impl Forge {
@@ -63,6 +65,7 @@ impl Forge {
             Forge::SourceHut => sourcehut(target, req),
             Forge::Bitbucket => bitbucket(target, req),
             Forge::Codeberg => codeberg(target, req),
+            Forge::Tangled => tangled(target, req),
         }
     }
 }
@@ -142,6 +145,21 @@ fn codeberg(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
         Lines::Single(line) => format!("L{line}"),
         Lines::Range(start, end) => format!("L{start}-L{end}"),
     });
+    finish(target, &path, fragment)
+}
+
+fn tangled(target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
+    let path = format!(
+        "{}/blob/{}/{}",
+        req.dir,
+        git_ref_str(&req.git_ref),
+        req.file
+    );
+    let fragment = req.lines.as_ref().map(|lines| match lines {
+        Lines::Single(line) => format!("L{line}"),
+        Lines::Range(start, end) => format!("L{start}-{end}"),
+    });
+
     finish(target, &path, fragment)
 }
 
