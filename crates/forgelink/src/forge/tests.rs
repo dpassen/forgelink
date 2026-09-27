@@ -1,8 +1,8 @@
 use super::*;
 use crate::{GitRef, Lines, LinkRequest};
 
-fn target(host: &str) -> ForgeTarget {
-    ForgeTarget::new(&format!("https://{host}"), detect(host).unwrap()).unwrap()
+fn target(host: &str, forge: Forge) -> ForgeTarget {
+    ForgeTarget::new(&format!("https://{host}"), forge).unwrap()
 }
 
 fn req(dir: &str, file: &str, git_ref: GitRef) -> LinkRequest {
@@ -100,7 +100,7 @@ fn detects_with_port_in_host() {
 
 #[test]
 fn github_commit_no_lines() {
-    let forge = target("github.com");
+    let forge = target("github.com", Forge::GitHub);
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -110,7 +110,7 @@ fn github_commit_no_lines() {
 
 #[test]
 fn github_commit_single_line() {
-    let forge = target("github.com");
+    let forge = target("github.com", Forge::GitHub);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(42)));
     assert_eq!(
@@ -121,7 +121,7 @@ fn github_commit_single_line() {
 
 #[test]
 fn github_commit_line_range() {
-    let forge = target("github.com");
+    let forge = target("github.com", Forge::GitHub);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(42), nz(55)));
     assert_eq!(
@@ -132,7 +132,7 @@ fn github_commit_line_range() {
 
 #[test]
 fn github_encodes_special_chars() {
-    let forge = target("github.com");
+    let forge = target("github.com", Forge::GitHub);
     let request = req("user/repo", "src/my file.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -142,7 +142,7 @@ fn github_encodes_special_chars() {
 
 #[test]
 fn github_encodes_rfc3986_path_characters() {
-    let forge = target("github.com");
+    let forge = target("github.com", Forge::GitHub);
     let request = req(
         "user/repo",
         "app/[slug]/:@!$&'()*+,;=-._~ café?#%.tsx",
@@ -159,7 +159,7 @@ fn github_encodes_rfc3986_path_characters() {
 
 #[test]
 fn branch_with_slash_keeps_slash() {
-    let forge = target("github.com");
+    let forge = target("github.com", Forge::GitHub);
     let request = req("user/repo", "src/main.rs", branch("feature/x"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -171,7 +171,7 @@ fn branch_with_slash_keeps_slash() {
 
 #[test]
 fn gitlab_commit_no_lines() {
-    let forge = target("gitlab.com");
+    let forge = target("gitlab.com", Forge::GitLab);
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -181,7 +181,7 @@ fn gitlab_commit_no_lines() {
 
 #[test]
 fn gitlab_single_line() {
-    let forge = target("gitlab.com");
+    let forge = target("gitlab.com", Forge::GitLab);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
@@ -192,7 +192,7 @@ fn gitlab_single_line() {
 
 #[test]
 fn gitlab_commit_line_range() {
-    let forge = target("gitlab.com");
+    let forge = target("gitlab.com", Forge::GitLab);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(10), nz(20)));
     assert_eq!(
@@ -205,7 +205,7 @@ fn gitlab_commit_line_range() {
 
 #[test]
 fn tangled_commit_no_lines() {
-    let forge = target("tangled.org");
+    let forge = target("tangled.org", Forge::Tangled);
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -215,7 +215,7 @@ fn tangled_commit_no_lines() {
 
 #[test]
 fn tangled_commit_single_line() {
-    let forge = target("tangled.org");
+    let forge = target("tangled.org", Forge::Tangled);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(42)));
     assert_eq!(
@@ -226,7 +226,7 @@ fn tangled_commit_single_line() {
 
 #[test]
 fn tangled_commit_line_range() {
-    let forge = target("tangled.org");
+    let forge = target("tangled.org", Forge::Tangled);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(42), nz(55)));
     assert_eq!(
@@ -239,7 +239,7 @@ fn tangled_commit_line_range() {
 
 #[test]
 fn sourcehut_commit_no_lines() {
-    let forge = target("git.sr.ht");
+    let forge = target("git.sr.ht", Forge::SourceHut);
     let request = req("~user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -249,7 +249,7 @@ fn sourcehut_commit_no_lines() {
 
 #[test]
 fn sourcehut_single_line() {
-    let forge = target("git.sr.ht");
+    let forge = target("git.sr.ht", Forge::SourceHut);
     let mut request = req("~user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
@@ -260,7 +260,7 @@ fn sourcehut_single_line() {
 
 #[test]
 fn sourcehut_commit_line_range() {
-    let forge = target("git.sr.ht");
+    let forge = target("git.sr.ht", Forge::SourceHut);
     let mut request = req("~user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(5), nz(15)));
     assert_eq!(
@@ -273,7 +273,7 @@ fn sourcehut_commit_line_range() {
 
 #[test]
 fn bitbucket_commit_no_lines() {
-    let forge = target("bitbucket.org");
+    let forge = target("bitbucket.org", Forge::Bitbucket);
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -283,7 +283,7 @@ fn bitbucket_commit_no_lines() {
 
 #[test]
 fn bitbucket_single_line() {
-    let forge = target("bitbucket.org");
+    let forge = target("bitbucket.org", Forge::Bitbucket);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
@@ -294,7 +294,7 @@ fn bitbucket_single_line() {
 
 #[test]
 fn bitbucket_commit_line_range() {
-    let forge = target("bitbucket.org");
+    let forge = target("bitbucket.org", Forge::Bitbucket);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(10), nz(20)));
     assert_eq!(
@@ -305,7 +305,7 @@ fn bitbucket_commit_line_range() {
 
 #[test]
 fn bitbucket_encodes_special_chars_in_line_anchor() {
-    let forge = target("bitbucket.org");
+    let forge = target("bitbucket.org", Forge::Bitbucket);
     let mut request = req("user/repo", "src/a:b?#%.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
@@ -316,7 +316,7 @@ fn bitbucket_encodes_special_chars_in_line_anchor() {
 
 #[test]
 fn bitbucket_branch_no_lines() {
-    let forge = target("bitbucket.org");
+    let forge = target("bitbucket.org", Forge::Bitbucket);
     let request = req("user/repo", "src/main.rs", branch("main"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -328,7 +328,7 @@ fn bitbucket_branch_no_lines() {
 
 #[test]
 fn codeberg_branch_no_lines() {
-    let forge = target("codeberg.org");
+    let forge = target("codeberg.org", Forge::Codeberg);
     let request = req("user/repo", "src/main.rs", branch("main"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -338,7 +338,7 @@ fn codeberg_branch_no_lines() {
 
 #[test]
 fn codeberg_commit_prefixes_path() {
-    let forge = target("codeberg.org");
+    let forge = target("codeberg.org", Forge::Codeberg);
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -348,7 +348,7 @@ fn codeberg_commit_prefixes_path() {
 
 #[test]
 fn codeberg_single_line() {
-    let forge = target("codeberg.org");
+    let forge = target("codeberg.org", Forge::Codeberg);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Single(nz(7)));
     assert_eq!(
@@ -359,7 +359,7 @@ fn codeberg_single_line() {
 
 #[test]
 fn codeberg_commit_line_range() {
-    let forge = target("codeberg.org");
+    let forge = target("codeberg.org", Forge::Codeberg);
     let mut request = req("user/repo", "src/main.rs", commit("abc123"));
     request.lines = Some(Lines::Range(nz(1), nz(10)));
     assert_eq!(
@@ -370,7 +370,7 @@ fn codeberg_commit_line_range() {
 
 #[test]
 fn fedora_forge_uses_codeberg_format() {
-    let forge = target("forge.fedoraproject.org");
+    let forge = target("forge.fedoraproject.org", Forge::Codeberg);
     let request = req("user/repo", "src/main.rs", commit("abc123"));
     assert_eq!(
         forge.file_url(&request).unwrap(),
@@ -382,7 +382,7 @@ fn fedora_forge_uses_codeberg_format() {
 
 #[test]
 fn project_url_github() {
-    let forge = target("github.com");
+    let forge = target("github.com", Forge::GitHub);
     assert_eq!(
         forge.project_url("user/repo").unwrap(),
         "https://github.com/user/repo"
@@ -391,15 +391,15 @@ fn project_url_github() {
 
 #[test]
 fn project_url_all_forges_same_format() {
-    for host in &[
-        "github.com",
-        "gitlab.com",
-        "git.sr.ht",
-        "bitbucket.org",
-        "codeberg.org",
-        "tangled.org",
+    for (host, kind) in [
+        ("github.com", Forge::GitHub),
+        ("gitlab.com", Forge::GitLab),
+        ("git.sr.ht", Forge::SourceHut),
+        ("bitbucket.org", Forge::Bitbucket),
+        ("codeberg.org", Forge::Codeberg),
+        ("tangled.org", Forge::Tangled),
     ] {
-        let forge = target(host);
+        let forge = target(host, kind);
         assert_eq!(
             forge.project_url("user/repo").unwrap(),
             format!("https://{host}/user/repo")
