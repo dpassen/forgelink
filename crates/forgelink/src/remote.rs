@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use gix::{bstr::ByteSlice, remote::find};
+use gix::{bstr::ByteSlice, error::MetadataValue};
 
 use crate::{Error, GitRef, RemoteInfo, Result};
 
@@ -9,24 +9,35 @@ pub fn discover(path: &Path) -> Result<gix::Repository> {
 }
 
 pub fn location(repo: &gix::Repository, remote_name: &str) -> Result<RemoteInfo> {
-    let remote = repo
-        .try_find_remote(remote_name)
+    let mut remote = repo
+        .try_find_remote_without_url_rewrite(remote_name)
         .ok_or_else(|| Error::NoRemote(remote_name.to_string()))?
-        .map_err(|source| match source {
-            source @ (find::Error::Url { .. } | find::Error::Init(_)) => {
-                Error::InvalidRemoteUrl(source.to_string())
-            }
-            source @ (find::Error::RefSpec { .. } | find::Error::TagOpt(_)) => {
-                Error::InvalidRemote {
-                    name: remote_name.to_string(),
-                    source: Box::new(source),
-                }
-            }
-        })?;
+        .map_err(|source| invalid_remote(source, remote_name))?;
+    remote
+        .rewrite_urls()
+        .map_err(|source| Error::InvalidRemoteUrl(source.to_string()))?;
     let url = remote
         .url(gix::remote::Direction::Fetch)
         .ok_or_else(|| Error::InvalidRemoteUrl("missing fetch URL".to_string()))?;
     location_from_url(url)
+}
+
+fn invalid_remote(source: gix::Error, remote_name: &str) -> Error {
+    let invalid_url = source.metadata().any(|metadata| {
+        matches!(
+            metadata.get("key"),
+            Some(MetadataValue::String(key))
+                if key == "remote.<name>.url" || key == "remote.<name>.pushUrl"
+        )
+    });
+    if invalid_url {
+        Error::InvalidRemoteUrl(source.to_string())
+    } else {
+        Error::InvalidRemote {
+            name: remote_name.to_string(),
+            source: Box::new(source),
+        }
+    }
 }
 
 pub fn root(repo: &gix::Repository) -> Result<PathBuf> {
