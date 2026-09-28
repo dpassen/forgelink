@@ -57,6 +57,27 @@ pub enum Forge {
     Tangled,
 }
 
+/// An error returned when parsing an unsupported forge name.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("unsupported forge '{0}'")]
+pub struct ParseForgeError(String);
+
+impl std::str::FromStr for Forge {
+    type Err = ParseForgeError;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        match value {
+            "github" => Ok(Forge::GitHub),
+            "gitlab" => Ok(Forge::GitLab),
+            "sourcehut" => Ok(Forge::SourceHut),
+            "bitbucket" => Ok(Forge::Bitbucket),
+            "codeberg" => Ok(Forge::Codeberg),
+            "tangled" => Ok(Forge::Tangled),
+            _ => Err(ParseForgeError(value.to_owned())),
+        }
+    }
+}
+
 impl Forge {
     pub(crate) fn file_url(self, target: &ForgeTarget, req: &LinkRequest) -> Result<String> {
         match self {

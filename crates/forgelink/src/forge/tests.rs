@@ -26,6 +26,27 @@ fn nz(n: u32) -> std::num::NonZero<u32> {
     std::num::NonZero::new(n).unwrap()
 }
 
+// --- parsing ---
+
+#[test]
+fn parses_forge_names() {
+    for (name, expected) in [
+        ("github", Forge::GitHub),
+        ("gitlab", Forge::GitLab),
+        ("sourcehut", Forge::SourceHut),
+        ("bitbucket", Forge::Bitbucket),
+        ("codeberg", Forge::Codeberg),
+        ("tangled", Forge::Tangled),
+    ] {
+        assert_eq!(name.parse::<Forge>().unwrap(), expected);
+    }
+}
+
+#[test]
+fn rejects_unknown_forge_name() {
+    assert!("unknown".parse::<Forge>().is_err());
+}
+
 // --- detection ---
 
 #[test]

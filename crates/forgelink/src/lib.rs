@@ -3,7 +3,7 @@ mod remote;
 mod repo_file;
 mod target;
 
-pub use forge::Forge;
+pub use forge::{Forge, ParseForgeError};
 pub use target::ForgeTarget;
 
 use std::num::NonZero;

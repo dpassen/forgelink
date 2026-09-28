@@ -1,4 +1,5 @@
 use super::*;
+use forgelink::Forge;
 
 #[test]
 fn parses_alias_and_enterprise_targets() {
@@ -24,30 +25,6 @@ fn parses_alias_and_enterprise_targets() {
     let enterprise = config.target_for("git.company.tld").unwrap();
     assert_eq!(enterprise.base_url(), "https://company.tld/services/gitlab");
     assert_eq!(enterprise.forge(), Forge::GitLab);
-}
-
-#[test]
-fn parses_every_supported_forge() {
-    for (name, expected) in [
-        ("github", Forge::GitHub),
-        ("gitlab", Forge::GitLab),
-        ("sourcehut", Forge::SourceHut),
-        ("bitbucket", Forge::Bitbucket),
-        ("codeberg", Forge::Codeberg),
-        ("tangled", Forge::Tangled),
-    ] {
-        let config = Config::parse(&format!(
-            r#"
-                [[hosts]]
-                host = "internal"
-                base-url = "https://git.example.com"
-                forge = "{name}"
-            "#
-        ))
-        .unwrap();
-
-        assert_eq!(config.target_for("internal").unwrap().forge(), expected);
-    }
 }
 
 #[test]

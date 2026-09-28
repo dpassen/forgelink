@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, anyhow};
 use directories::BaseDirs;
-use forgelink::{Forge, ForgeTarget};
+use forgelink::ForgeTarget;
 use serde::Deserialize;
 
 #[derive(Debug, Default)]
@@ -61,7 +61,9 @@ impl Config {
                 return Err(anyhow!("duplicate host '{}'", entry.host));
             }
 
-            let forge = parse_forge(&entry.forge)
+            let forge = entry
+                .forge
+                .parse()
                 .with_context(|| format!("invalid target for host '{}'", entry.host))?;
             let target = ForgeTarget::new(&entry.base_url, forge)
                 .with_context(|| format!("invalid target for host '{}'", entry.host))?;
@@ -103,18 +105,6 @@ struct HostEntry {
     host: String,
     base_url: String,
     forge: String,
-}
-
-fn parse_forge(value: &str) -> anyhow::Result<Forge> {
-    match value {
-        "github" => Ok(Forge::GitHub),
-        "gitlab" => Ok(Forge::GitLab),
-        "sourcehut" => Ok(Forge::SourceHut),
-        "bitbucket" => Ok(Forge::Bitbucket),
-        "codeberg" => Ok(Forge::Codeberg),
-        "tangled" => Ok(Forge::Tangled),
-        _ => Err(anyhow!("unsupported forge '{value}'")),
-    }
 }
 
 #[cfg(test)]
