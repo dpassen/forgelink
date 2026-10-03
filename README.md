@@ -195,26 +195,41 @@ visual mode to the system clipboard.
 
 ```lua
 if vim.fn.exepath('forgelink') ~= '' then
-    vim.keymap.set('n', '<leader>cf',
-        function()
-            local curFile = vim.api.nvim_buf_get_name(0)
-            local output = vim.fn.system({ 'forgelink', 'print', curFile })
-            vim.fn.setreg('+', vim.trim(output))
-        end,
-        { desc = "Copy URL to Git forge for current file to clipboard" }
-    )
-    vim.keymap.set('v', '<leader>cf',
-        function()
-            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
-            local curFile = vim.api.nvim_buf_get_name(0)
-            local startLine = vim.fn.line("'<")
-            local endLine = vim.fn.line("'>")
-            local lineRef = startLine == endLine and tostring(startLine) or (startLine .. '-' .. endLine)
-            local output = vim.fn.system({ 'forgelink', 'print', curFile .. ':' .. lineRef })
-            vim.fn.setreg('+', vim.trim(output))
-        end,
-        { desc = "Copy URL to Git forge for current file with selected line numbers to clipboard" }
-    )
+    local remotes = { "upstream", "private", "origin" }
+    
+    -- Tries executing forgelink across remotes until one succeeds.
+    local function copy_forge_url(target)
+        for _, remote in ipairs(remotes) do
+            local output = vim.fn.system({ 'forgelink', 'print', '--remote', remote, target })
+    
+            if vim.v.shell_error == 0 then
+                vim.fn.setreg('+', vim.trim(output))
+                vim.notify("Copied forge URL (" .. remote .. "): \n" .. vim.trim(output), vim.log.levels.INFO)
+                return
+            end
+        end
+    
+        vim.notify("Failed to generate forge URL for any candidate branch", vim.log.levels.ERROR)
+    end
+    
+    -- Normal mode: file URL
+    vim.keymap.set('n', '<leader>cf', function()
+        local curFile = vim.api.nvim_buf_get_name(0)
+        copy_forge_url(curFile)
+    end, { desc = "Copy URL to Git forge for current file to clipboard" })
+    
+    -- Visual mode: file URL with line range
+    vim.keymap.set("v", "<leader>cf", function()
+        -- Exit visual mode to update '<, '> marks
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
+    
+        local curFile = vim.api.nvim_buf_get_name(0)
+        local startLine = vim.fn.line("'<")
+        local endLine = vim.fn.line("'>")
+        local lineRef = (startLine == endLine) and tostring(startLine) or (startLine .. "-" .. endLine)
+    
+        copy_forge_url(curFile .. ":" .. lineRef)
+    end, { desc = "Copy URL to Git forge for current file with selected line numbers to clipboard" })
 end
 ```
 
