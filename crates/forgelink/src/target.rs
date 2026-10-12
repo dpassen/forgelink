@@ -87,6 +87,10 @@ impl ForgeTarget {
         self.with_path(dir).map(Into::into)
     }
 
+    pub(crate) fn url(&self) -> &Url {
+        &self.base_url
+    }
+
     pub(crate) fn with_path(&self, path: &str) -> Result<Url> {
         let mut url = self.base_url.clone();
         path_segments_mut(&mut url)?.pop_if_empty();

@@ -165,21 +165,31 @@ pub fn detect_forge(host: &str) -> Option<Forge> {
     forge::detect(host)
 }
 
-fn detected_target(remote: &RemoteInfo) -> Result<ForgeTarget> {
-    let Some(forge) = detect_forge(remote.hostname()) else {
-        return Err(Error::UnknownForge(remote.hostname().to_string()));
-    };
-    ForgeTarget::new(&format!("https://{}", remote.web_authority()), forge)
+struct ResolvedRemote {
+    target: ForgeTarget,
+    repository: String,
 }
 
-fn resolve_target(
+fn resolve_remote(
     remote: &RemoteInfo,
     target_for_remote: impl FnOnce(&RemoteInfo) -> Option<ForgeTarget>,
-) -> Result<ForgeTarget> {
-    let Some(target) = target_for_remote(remote) else {
-        return detected_target(remote);
+) -> Result<ResolvedRemote> {
+    let configured_target = target_for_remote(remote);
+    let forge = match &configured_target {
+        Some(target) => target.forge(),
+        None => detect_forge(remote.hostname())
+            .ok_or_else(|| Error::UnknownForge(remote.hostname().to_string()))?,
     };
-    Ok(target)
+    let location = forge.web_location(remote, configured_target.as_ref())?;
+    let target = match configured_target {
+        Some(target) => target,
+        None => ForgeTarget::new(&location.base_url, forge)?,
+    };
+
+    Ok(ResolvedRemote {
+        target,
+        repository: location.repository,
+    })
 }
 
 /// Builds a URL for the repository project page.
@@ -199,8 +209,8 @@ pub fn project_link(
 ) -> Result<String> {
     let repo = remote::discover(path)?;
     let remote_info = remote::location(&repo, remote_name)?;
-    let target = resolve_target(&remote_info, target_for_remote)?;
-    target.project_url(&remote_info.repository)
+    let resolved = resolve_remote(&remote_info, target_for_remote)?;
+    resolved.target.project_url(&resolved.repository)
 }
 
 /// Builds a URL for `file`, optionally with line anchors.
@@ -230,14 +240,14 @@ pub fn build_link(
         RefSpec::Commit => remote::head_commit(&file.repo)?,
         RefSpec::Branch => remote::current_branch(&file.repo)?,
     };
-    let target = resolve_target(&remote_info, target_for_remote)?;
+    let resolved = resolve_remote(&remote_info, target_for_remote)?;
     let req = LinkRequest {
-        dir: remote_info.repository,
+        dir: resolved.repository,
         file: file.path,
         git_ref,
         lines,
     };
-    target.file_url(&req)
+    resolved.target.file_url(&req)
 }
 
 #[cfg(test)]
