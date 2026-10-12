@@ -181,10 +181,25 @@ merged (i.e.: 25.07.1), you should use `%{buffer_name}` in place of
 In `~/.config/kak/kakrc`:
 
 ```kak
-define-command -docstring 'copy a forge link to the current line' forge-link %{
-    nop %sh{ forgelink copy "$kak_buffile:$kak_cursor_line" }
+declare-user-mode forgelink
+map global user g ':enter-user-mode forgelink<ret>' -docstring "forgelink"
+map global forgelink c ':forgelink copy<ret>' -docstring "copy link"
+map global forgelink o ':forgelink open<ret>' -docstring "open link"
+map global forgelink p ':forgelink print<ret>' -docstring "print link"
+
+define-command forgelink -params 1 -hidden %{
+  echo %sh{
+    anchor=${kak_selection_desc%%.*}
+    cursor=${kak_selection_desc#*,}
+    cursor=${cursor%%.*}
+    if [ "$anchor" -gt "$cursor" ]; then
+      start=$cursor end=$anchor
+    else
+      start=$anchor end=$cursor
+    fi
+    forgelink "$1" "$kak_buffile:$start-$end" 2>&1
+  }
 }
-map global user o ': forge-link<ret>' -docstring 'forge link'
 ```
 
 ### Neovim
