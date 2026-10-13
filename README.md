@@ -165,12 +165,12 @@ required. Use `copy` to copy directly, or `print` to capture stdout yourself.
 In `~/.config/helix/config.toml`:
 
 ```toml
-[keys.normal.space.l]
+[keys.normal.space.u]
 c = ':sh forgelink copy "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
 o = ':sh forgelink open "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
 p = ':sh forgelink print "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
 
-[keys.select.space.l]
+[keys.select.space.u]
 c = ':sh forgelink copy "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
 o = ':sh forgelink open "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
 p = ':sh forgelink print "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
@@ -182,7 +182,7 @@ In `~/.config/kak/kakrc`:
 
 ```kak
 declare-user-mode forgelink
-map global user g ':enter-user-mode forgelink<ret>' -docstring "forgelink"
+map global user u ':enter-user-mode forgelink<ret>' -docstring "forgelink"
 map global forgelink c ':forgelink copy<ret>' -docstring "copy link"
 map global forgelink o ':forgelink open<ret>' -docstring "open link"
 map global forgelink p ':forgelink print<ret>' -docstring "print link"
