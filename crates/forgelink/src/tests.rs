@@ -15,6 +15,24 @@ fn init_repo(url: &str) -> tempfile::TempDir {
     dir
 }
 
+#[cfg(feature = "sha256")]
+fn init_sha256_repo(url: &str) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let options = gix::create::Options {
+        object_hash: Some(gix::hash::Kind::Sha256),
+        ..Default::default()
+    };
+    gix::ThreadSafeRepository::init(dir.path(), gix::create::Kind::WithWorktree, options).unwrap();
+    let config = dir.path().join(".git").join("config");
+    let mut f = fs::OpenOptions::new().append(true).open(config).unwrap();
+    writeln!(
+        f,
+        "[user]\n\tname = Test\n\temail = test@example.com\n[remote \"origin\"]\n\turl = {url}"
+    )
+    .unwrap();
+    dir
+}
+
 fn commit_empty(dir: &Path) {
     let repo = gix::open(dir).unwrap();
     let tree = repo
@@ -53,6 +71,34 @@ fn build_link_end_to_end() {
         "got {url}"
     );
     assert!(url.ends_with("/src/main.rs#L3"), "got {url}");
+}
+
+#[cfg(feature = "sha256")]
+#[test]
+fn build_link_supports_sha256_repositories() {
+    let dir = init_sha256_repo("https://gitlab.com/user/repo.git");
+    commit_empty(dir.path());
+    fs::write(dir.path().join("main.rs"), "").unwrap();
+
+    let url = build_link(
+        dir.path(),
+        "origin",
+        "main.rs",
+        None,
+        RefSpec::Commit,
+        automatic_target,
+    )
+    .unwrap();
+
+    let repo = remote::discover(dir.path()).unwrap();
+    let GitRef::Commit(commit) = remote::head_commit(&repo).unwrap() else {
+        panic!("expected a commit");
+    };
+    assert_eq!(commit.len(), 64);
+    assert_eq!(
+        url,
+        format!("https://gitlab.com/user/repo/-/blob/{commit}/main.rs")
+    );
 }
 
 #[test]
