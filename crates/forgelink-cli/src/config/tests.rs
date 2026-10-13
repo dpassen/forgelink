@@ -28,6 +28,26 @@ fn parses_alias_and_enterprise_targets() {
 }
 
 #[test]
+fn parses_azure_devops_target() {
+    let config = Config::parse(
+        r#"
+            [[hosts]]
+            host = "ado.company.tld"
+            base-url = "https://company.tld/tfs/DefaultCollection"
+            forge = "azure-devops"
+        "#,
+    )
+    .unwrap();
+
+    let target = config.target_for("ado.company.tld").unwrap();
+    assert_eq!(
+        target.base_url(),
+        "https://company.tld/tfs/DefaultCollection"
+    );
+    assert_eq!(target.forge(), Forge::AzureDevOps);
+}
+
+#[test]
 fn missing_hosts_defaults_to_empty() {
     let config = Config::parse("").unwrap();
     assert!(config.target_for("github.com").is_none());

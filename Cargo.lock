@@ -375,6 +375,7 @@ dependencies = [
  "dunce",
  "gix",
  "iri-string",
+ "percent-encoding",
  "tempfile",
  "thiserror",
  "url",

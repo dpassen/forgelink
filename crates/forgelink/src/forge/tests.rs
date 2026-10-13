@@ -37,6 +37,7 @@ fn parses_forge_names() {
         ("bitbucket", Forge::Bitbucket),
         ("codeberg", Forge::Codeberg),
         ("tangled", Forge::Tangled),
+        ("azure-devops", Forge::AzureDevOps),
     ] {
         assert_eq!(name.parse::<Forge>().unwrap(), expected);
     }
@@ -86,6 +87,41 @@ fn detects_codeberg() {
     assert!(detect("forge.fedoraproject.org").is_some());
     assert!(detect("subdomain.codeberg.org").is_none());
     assert!(detect("subdomain.forge.fedoraproject.org").is_none());
+}
+
+#[test]
+fn detects_azure_devops_web_host() {
+    assert_eq!(detect("dev.azure.com"), Some(Forge::AzureDevOps));
+}
+
+#[test]
+fn detects_azure_devops_ssh_host() {
+    assert_eq!(detect("ssh.dev.azure.com"), Some(Forge::AzureDevOps));
+}
+
+#[test]
+fn azure_devops_modern_domain_does_not_match_lookalikes() {
+    assert!(detect("notdev.azure.com").is_none());
+    assert!(detect("dev.azure.com.example.org").is_none());
+}
+
+#[test]
+fn detects_azure_devops_legacy_web_host() {
+    assert_eq!(
+        detect("organization.visualstudio.com"),
+        Some(Forge::AzureDevOps)
+    );
+}
+
+#[test]
+fn detects_azure_devops_legacy_ssh_host() {
+    assert_eq!(detect("vs-ssh.visualstudio.com"), Some(Forge::AzureDevOps));
+}
+
+#[test]
+fn azure_devops_legacy_domain_does_not_match_lookalikes() {
+    assert!(detect("notvisualstudio.com").is_none());
+    assert!(detect("visualstudio.com.example.org").is_none());
 }
 
 #[test]
@@ -399,6 +435,131 @@ fn fedora_forge_uses_codeberg_format() {
     );
 }
 
+// --- azure devops ---
+
+#[test]
+fn azure_devops_commit_no_lines() {
+    let forge = target("dev.azure.com", Forge::AzureDevOps);
+    let request = req(
+        "organization/project/_git/repository",
+        "src/main.rs",
+        commit("abc123"),
+    );
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://dev.azure.com/organization/project/_git/repository",
+            "?path=%2Fsrc%2Fmain.rs&version=GCabc123&_a=contents"
+        )
+    );
+}
+
+#[test]
+fn azure_devops_branch_no_lines() {
+    let forge = target("dev.azure.com", Forge::AzureDevOps);
+    let request = req(
+        "organization/project/_git/repository",
+        "src/main.rs",
+        branch("main"),
+    );
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://dev.azure.com/organization/project/_git/repository",
+            "?path=%2Fsrc%2Fmain.rs&version=GBmain&_a=contents"
+        )
+    );
+}
+
+#[test]
+fn azure_devops_encodes_slash_in_branch() {
+    let forge = target("dev.azure.com", Forge::AzureDevOps);
+    let request = req(
+        "organization/project/_git/repository",
+        "src/main.rs",
+        branch("feature/x"),
+    );
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://dev.azure.com/organization/project/_git/repository",
+            "?path=%2Fsrc%2Fmain.rs&version=GBfeature%2Fx&_a=contents"
+        )
+    );
+}
+
+#[test]
+fn azure_devops_encodes_special_chars_in_file_path() {
+    let forge = target("dev.azure.com", Forge::AzureDevOps);
+    let request = req(
+        "organization/project/_git/repository",
+        "src/my file?#%.rs",
+        commit("abc123"),
+    );
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://dev.azure.com/organization/project/_git/repository",
+            "?path=%2Fsrc%2Fmy+file%3F%23%25.rs&version=GCabc123&_a=contents"
+        )
+    );
+}
+
+#[test]
+fn azure_devops_single_line() {
+    let forge = target("dev.azure.com", Forge::AzureDevOps);
+    let mut request = req(
+        "organization/project/_git/repository",
+        "src/main.rs",
+        commit("abc123"),
+    );
+    request.lines = Some(Lines::Single(nz(42)));
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://dev.azure.com/organization/project/_git/repository",
+            "?path=%2Fsrc%2Fmain.rs&version=GCabc123&line=42&lineEnd=43",
+            "&lineStartColumn=1&lineEndColumn=1&lineStyle=plain&_a=contents"
+        )
+    );
+}
+
+#[test]
+fn azure_devops_line_range() {
+    let forge = target("dev.azure.com", Forge::AzureDevOps);
+    let mut request = req(
+        "organization/project/_git/repository",
+        "src/main.rs",
+        commit("abc123"),
+    );
+    request.lines = Some(Lines::Range(nz(42), nz(55)));
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://dev.azure.com/organization/project/_git/repository",
+            "?path=%2Fsrc%2Fmain.rs&version=GCabc123&line=42&lineEnd=56",
+            "&lineStartColumn=1&lineEndColumn=1&lineStyle=plain&_a=contents"
+        )
+    );
+}
+
+#[test]
+fn azure_devops_supports_custom_base_path() {
+    let forge = ForgeTarget::new(
+        "https://company.tld/tfs/DefaultCollection",
+        Forge::AzureDevOps,
+    )
+    .unwrap();
+    let request = req("project/_git/repository", "src/main.rs", commit("abc123"));
+    assert_eq!(
+        forge.file_url(&request).unwrap(),
+        concat!(
+            "https://company.tld/tfs/DefaultCollection/project/_git/repository",
+            "?path=%2Fsrc%2Fmain.rs&version=GCabc123&_a=contents"
+        )
+    );
+}
+
 // --- project_url ---
 
 #[test]
@@ -419,6 +580,7 @@ fn project_url_all_forges_same_format() {
         ("bitbucket.org", Forge::Bitbucket),
         ("codeberg.org", Forge::Codeberg),
         ("tangled.org", Forge::Tangled),
+        ("dev.azure.com", Forge::AzureDevOps),
     ] {
         let forge = target(host, kind);
         assert_eq!(

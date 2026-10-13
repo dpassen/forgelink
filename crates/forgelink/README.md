@@ -16,6 +16,7 @@ This is the library crate behind the [`forgelink`](https://crates.io/crates/forg
 - Bitbucket
 - Codeberg (including forge.fedoraproject.org)
 - Tangled
+- Azure DevOps
 
 ## Usage
 

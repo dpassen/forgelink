@@ -449,6 +449,235 @@ fn unknown_host_without_target_still_errors() {
 }
 
 #[test]
+fn azure_devops_ssh_uses_web_host() {
+    let remote = RemoteInfo {
+        hostname: "ssh.dev.azure.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "v3/organization/project/repository".to_string(),
+    };
+
+    let resolved = resolve_remote(&remote, automatic_target).unwrap();
+
+    assert_eq!(resolved.target.base_url(), "https://dev.azure.com/");
+}
+
+#[test]
+fn azure_devops_ssh_normalizes_repository_path() {
+    let remote = RemoteInfo {
+        hostname: "ssh.dev.azure.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "v3/organization/project/repository".to_string(),
+    };
+
+    let resolved = resolve_remote(&remote, automatic_target).unwrap();
+
+    assert_eq!(resolved.repository, "organization/project/_git/repository");
+}
+
+#[test]
+fn azure_devops_legacy_ssh_uses_web_host() {
+    let remote = RemoteInfo {
+        hostname: "vs-ssh.visualstudio.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "v3/organization/project/repository".to_string(),
+    };
+
+    let resolved = resolve_remote(&remote, automatic_target).unwrap();
+
+    assert_eq!(
+        resolved.target.base_url(),
+        "https://organization.visualstudio.com/"
+    );
+}
+
+#[test]
+fn azure_devops_legacy_ssh_normalizes_repository_path() {
+    let remote = RemoteInfo {
+        hostname: "vs-ssh.visualstudio.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "v3/organization/project/repository".to_string(),
+    };
+
+    let resolved = resolve_remote(&remote, automatic_target).unwrap();
+
+    assert_eq!(resolved.repository, "project/_git/repository");
+}
+
+#[test]
+fn azure_devops_https_preserves_web_location() {
+    let remote = RemoteInfo {
+        hostname: "dev.azure.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Https,
+        repository: "organization/project/_git/repository".to_string(),
+    };
+
+    let resolved = resolve_remote(&remote, automatic_target).unwrap();
+
+    assert_eq!(resolved.target.base_url(), "https://dev.azure.com/");
+    assert_eq!(resolved.repository, remote.repository);
+}
+
+#[test]
+fn azure_devops_https_organization_named_v3_is_not_an_ssh_path() {
+    let remote = RemoteInfo {
+        hostname: "dev.azure.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Https,
+        repository: "v3/project/_git/repository".to_string(),
+    };
+
+    let resolved = resolve_remote(&remote, automatic_target).unwrap();
+
+    assert_eq!(resolved.repository, remote.repository);
+}
+
+#[test]
+fn azure_devops_legacy_https_preserves_web_location() {
+    let remote = RemoteInfo {
+        hostname: "organization.visualstudio.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Https,
+        repository: "DefaultCollection/project/_git/repository".to_string(),
+    };
+
+    let resolved = resolve_remote(&remote, automatic_target).unwrap();
+
+    assert_eq!(
+        resolved.target.base_url(),
+        "https://organization.visualstudio.com/"
+    );
+    assert_eq!(resolved.repository, remote.repository);
+}
+
+#[test]
+fn azure_devops_rejects_malformed_ssh_repository_path() {
+    let remote = RemoteInfo {
+        hostname: "ssh.dev.azure.com".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "organization/project/repository".to_string(),
+    };
+
+    let error = resolve_remote(&remote, automatic_target).err().unwrap();
+
+    assert!(matches!(error, Error::InvalidRemoteUrl(_)));
+}
+
+#[test]
+fn azure_devops_target_normalizes_ssh_alias_repository_path() {
+    let remote = RemoteInfo {
+        hostname: "ado-work".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "v3/organization/project/repository".to_string(),
+    };
+    let target = ForgeTarget::new("https://dev.azure.com", Forge::AzureDevOps).unwrap();
+
+    let resolved = resolve_remote(&remote, |_| Some(target)).unwrap();
+
+    assert_eq!(resolved.repository, "organization/project/_git/repository");
+}
+
+#[test]
+fn azure_devops_legacy_target_normalizes_ssh_alias_repository_path() {
+    let remote = RemoteInfo {
+        hostname: "ado-work".to_string(),
+        port: None,
+        scheme: gix::url::Scheme::Ssh,
+        repository: "v3/organization/project/repository".to_string(),
+    };
+    let target =
+        ForgeTarget::new("https://organization.visualstudio.com", Forge::AzureDevOps).unwrap();
+
+    let resolved = resolve_remote(&remote, |_| Some(target)).unwrap();
+
+    assert_eq!(resolved.repository, "project/_git/repository");
+}
+
+#[test]
+fn project_link_azure_devops_ssh_end_to_end() {
+    let dir = init_repo("git@ssh.dev.azure.com:v3/organization/project/repository");
+
+    let url = project_link(dir.path(), "origin", automatic_target).unwrap();
+
+    assert_eq!(
+        url,
+        "https://dev.azure.com/organization/project/_git/repository"
+    );
+}
+
+#[test]
+fn project_link_azure_devops_ssh_decodes_percent_encoded_names() {
+    let dir = init_repo("git@ssh.dev.azure.com:v3/organization/My%20Project/My%20Repository");
+
+    let url = project_link(dir.path(), "origin", automatic_target).unwrap();
+
+    assert_eq!(
+        url,
+        "https://dev.azure.com/organization/My%20Project/_git/My%20Repository"
+    );
+}
+
+#[test]
+fn project_link_azure_devops_custom_collection_ssh_alias_end_to_end() {
+    let dir = init_repo("git@ado.company.tld:v3/DefaultCollection/project/repository");
+    let target = ForgeTarget::new(
+        "https://company.tld/tfs/DefaultCollection",
+        Forge::AzureDevOps,
+    )
+    .unwrap();
+
+    let url = project_link(dir.path(), "origin", |_| Some(target)).unwrap();
+
+    assert_eq!(
+        url,
+        "https://company.tld/tfs/DefaultCollection/project/_git/repository"
+    );
+}
+
+#[test]
+fn project_link_azure_devops_legacy_ssh_end_to_end() {
+    let dir = init_repo("organization@vs-ssh.visualstudio.com:v3/organization/project/repository");
+
+    let url = project_link(dir.path(), "origin", automatic_target).unwrap();
+
+    assert_eq!(
+        url,
+        "https://organization.visualstudio.com/project/_git/repository"
+    );
+}
+
+#[test]
+fn build_link_azure_devops_ssh_end_to_end() {
+    let dir = init_repo("git@ssh.dev.azure.com:v3/organization/project/repository");
+    commit_empty(dir.path());
+
+    let url = build_link(
+        dir.path(),
+        "origin",
+        "src/main.rs",
+        None,
+        RefSpec::Commit,
+        automatic_target,
+    )
+    .unwrap();
+
+    assert!(
+        url.starts_with(concat!(
+            "https://dev.azure.com/organization/project/_git/repository",
+            "?path=%2Fsrc%2Fmain.rs&version=GC"
+        )),
+        "got {url}"
+    );
+    assert!(url.ends_with("&_a=contents"), "got {url}");
+}
+
+#[test]
 fn lines_range_accepts_ascending() {
     let lines = Lines::range(NonZero::new(10).unwrap(), NonZero::new(20).unwrap()).unwrap();
     assert_eq!(lines.start().get(), 10);
