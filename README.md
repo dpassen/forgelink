@@ -165,17 +165,13 @@ required. Use `copy` to copy directly, or `print` to capture stdout yourself.
 In `~/.config/helix/config.toml`:
 
 ```toml
-[keys.normal.space]
-o = ":sh forgelink copy \"%{file_path_absolute}:%{cursor_line}\""
-```
+[keys.normal.space.l]
+c = ':sh forgelink copy "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
+o = ':sh forgelink open "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
 
-`space o` copies a link to the current line. `%{file_path_absolute}` is used so
-it works regardless of the directory Helix was launched from.
-
-If you are using a version released before
-[helix-editor/helix#12989](https://github.com/helix-editor/helix/pull/12989) was
-merged (i.e.: 25.07.1), you should use `%{buffer_name}` in place of
-`%{file_path_absolute}`.
+[keys.select.space.l]
+c = ':sh forgelink copy "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'
+o = ':sh forgelink open "%{buffer_name}:%{selection_line_start}-%{selection_line_end}"'```
 
 ### Kakoune
 
