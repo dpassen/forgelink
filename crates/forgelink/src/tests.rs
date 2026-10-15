@@ -102,6 +102,59 @@ fn build_link_supports_sha256_repositories() {
 }
 
 #[test]
+fn build_link_supports_relative_linked_worktrees() {
+    let main = init_repo("https://github.com/user/repo.git");
+    commit_empty(main.path());
+
+    let linked = main.path().join("linked");
+    fs::create_dir(&linked).unwrap();
+    fs::write(linked.join("main.rs"), "").unwrap();
+
+    let branch = gix::open(main.path())
+        .unwrap()
+        .head_name()
+        .unwrap()
+        .expect("symbolic HEAD");
+    let private_git_dir = main.path().join(".git/worktrees/linked");
+    fs::create_dir_all(&private_git_dir).unwrap();
+    fs::write(linked.join(".git"), "gitdir: ../.git/worktrees/linked\n").unwrap();
+    fs::write(private_git_dir.join("commondir"), "../..\n").unwrap();
+    fs::write(private_git_dir.join("gitdir"), "../../../linked/.git\n").unwrap();
+    fs::write(private_git_dir.join("HEAD"), format!("ref: {branch}\n")).unwrap();
+
+    let config = main.path().join(".git/config");
+    let mut config = fs::OpenOptions::new().append(true).open(config).unwrap();
+    writeln!(
+        config,
+        "[core]\n\trepositoryformatversion = 1\n[extensions]\n\trelativeWorktrees = true"
+    )
+    .unwrap();
+
+    let url = build_link(
+        &linked,
+        "origin",
+        "main.rs",
+        None,
+        RefSpec::Commit,
+        automatic_target,
+    )
+    .unwrap();
+
+    let repo = remote::discover(&linked).unwrap();
+    assert_eq!(
+        remote::root(&repo).unwrap(),
+        gix::path::realpath(&linked).unwrap()
+    );
+    let GitRef::Commit(commit) = remote::head_commit(&repo).unwrap() else {
+        panic!("expected a commit");
+    };
+    assert_eq!(
+        url,
+        format!("https://github.com/user/repo/blob/{commit}/main.rs")
+    );
+}
+
+#[test]
 fn build_link_works_for_nonexistent_file() {
     let dir = init_repo("https://github.com/user/repo.git");
     commit_empty(dir.path());
