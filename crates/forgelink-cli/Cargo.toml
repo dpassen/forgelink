@@ -37,6 +37,7 @@ toml = "1"
 tempfile = "3"
 
 [features]
-default = ["clipboard", "browser"]
+default = ["clipboard", "browser", "sha256"]
 clipboard = ["dep:arboard"]
 browser = ["dep:open"]
+sha256 = ["forgelink/sha256"]

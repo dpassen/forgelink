@@ -23,6 +23,9 @@ unwrap_used = "deny"
 [lints.rust]
 unsafe_code = "forbid"
 
+[features]
+sha256 = ["gix/sha256"]
+
 [dependencies]
 dunce = "1"
 gix = { version = "0.89", default-features = false, features = ["sha1"] }
