@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --locked --release --package forgelink-cli --target ${{ matrix.target }}
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        env:
+          ARCHIVE: forgelink-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+        run: |
+          mkdir dist
+          tar -C target/${{ matrix.target }}/release -czf "dist/$ARCHIVE" forgelink
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        env:
+          ARCHIVE: forgelink-${{ github.ref_name }}-${{ matrix.target }}.zip
+        run: |
+          New-Item -ItemType Directory -Path dist
+          Compress-Archive -Path target/${{ matrix.target }}/release/forgelink.exe -DestinationPath "dist/$env:ARCHIVE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
