@@ -44,7 +44,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path dist
           Compress-Archive -Path target/${{ matrix.target }}/release/forgelink.exe -DestinationPath "dist/$env:ARCHIVE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
           path: dist/*
