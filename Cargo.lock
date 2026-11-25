@@ -1279,9 +1279,9 @@ dependencies = [
 
 [[package]]
 name = "iri-string"
-version = "0.7.14"
+version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1663ee7d8cf2900cc1414b1e1eec9f348d6eaa3bcab07579f4726a4b8499f447"
+checksum = "5c7e416dac88ecbabfd77afe2078006bd868aef4b90ef85aedbcb52fa1c7ba13"
 dependencies = [
  "memchr",
  "serde",
